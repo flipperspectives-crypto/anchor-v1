@@ -110,3 +110,57 @@ that pins it. Last verified against the codebase and the 1017/1017 green suite o
    for the production serializable-Postgres design; multi-process/multi-host
    linearizability is a deployment property, not a property the code can
    guarantee (see `docs/SPEC.md` §4).
+8. **Wire nonces are single-use PER GUARDIAN, not per PSK (red-team-2 P2).**
+   Two `AcsGuardian` instances sharing one PSK each accept the same
+   byte-identical frame and mint two distinct one-use capabilities for one
+   intended action. HARD REQUIREMENT: one guardian instance per PSK for
+   one-use semantics. Do not run "replicas" behind a load balancer on the
+   same PSK expecting cross-instance replay protection — that needs a
+   shared nonce store, which is not implemented.
+9. **Wire subject is self-asserted under the PSK channel (red-team-2 P3).**
+   The HMAC-PSK wire protocol authenticates the CHANNEL, not the subject:
+   any PSK holder can name any subject in `event.subject`, minting
+   capabilities bound to a victim's holder key or poisoning the ASK
+   approver queue (holder-of-key proof still stops direct USE by the
+   attacker, but audit attribution is poisonable). Mitigations, in order:
+   (a) pass `wire_allowed_subjects` to `AcsGuardian` to DENY wire subjects
+   outside a known set at the authentication layer (default off);
+   (b) production MUST use a mutually-authenticated channel (mTLS or
+   DPoP-bound) that binds the subject to the channel identity, per the
+   module docstring's production note. Follow-up: per-peer keys or
+   channel-bound subjects.
+10. **`LocalTransparencyLog` without `trusted_issuers` is permissive
+    (red-team-2 P7).** With no `trusted_issuers`, any structurally-valid
+    statement — including an attacker-forged one — registers and receives
+    a genuine inclusion receipt. Construction now emits a loud
+    `UserWarning` in that case. Production deployments MUST pass an
+    explicit `trusted_issuers` set; the permissive default exists only for
+    tests and local experimentation.
+11. **`decision_timeout_s` is not a hard bound against GIL-holding
+    decision functions (red-team-2 P8).** The timeout is enforced via
+    `ThreadPoolExecutor.result(timeout=...)`, but a CPU-bound decision
+    function (e.g. a catastrophic-backtracking regex in a policy rule) can
+    starve the GIL and delay the timeout's enforcement itself (measured:
+    ~56s against a 2s bound), and pinned worker threads stay burning in
+    the pool — subsequent decisions DENY (fail-closed) but availability
+    degrades. The decision outcome still fails closed (DENY), never
+    fail-open. Production MUST isolate decision logic in a separate
+    process (as the `AcsGuardian` docstring already requires); in-process
+    timeouts are a backstop, not a guarantee.
+12. **Presented-envelope verb/target are not validated against the event
+    (red-team-2 P5).** `_validate_presented_envelope` binds principal,
+    exact args (`args_digest`), policy ref, and validity window — but NOT
+    `verb`/`target` against `event.action`/`event.resource`. This is
+    deliberate, not an oversight: the Wave 7 seam is cross-plane by design
+    (the shell shim presents `verb="exec"`/`target="trial-cmd"` for a
+    guardian event with `action="shell.exec"`/`resource="sandbox://host"`),
+    and no cross-plane verb/target mapping exists in the protocol, so the
+    guardian has no ground truth to equate against. The what/where binding
+    end-to-end is `args_digest` → `action_digest` → the PEP's
+    digest→command registry (unregistered digests are refused at consume).
+    Residual: a compromised shim (outside the trust boundary — the shim is
+    a trusted component) could label a presented envelope misleadingly;
+    the minted capability would still be bound to the exact decided args.
+    Recommended follow-up: an explicit per-deployment verb/target
+    allowlist or plane mapping if deployments need the guardian to
+    second-guess shim labels.
