@@ -40,6 +40,7 @@ must not be loosened for SCITT's different header requirements.
 from __future__ import annotations
 
 import hashlib
+import warnings
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping
@@ -451,6 +452,13 @@ class LocalTransparencyLog(TransparencyLog):
     ``registration_policy`` is an extra hook receiving the verified
     statement view (raise :class:`SCITTError` to refuse). ``allowed_types``
     defaults to every known ANCHOR statement type.
+
+    SECURITY: omitting ``trusted_issuers`` makes this log PERMISSIVE — any
+    structurally-valid statement (including ones forged by an attacker)
+    registers and receives a genuine inclusion receipt (red-team-2 P7).
+    A loud :class:`UserWarning` is emitted at construction in that case.
+    Production deployments MUST pass an explicit ``trusted_issuers`` set;
+    the permissive default exists only for tests and local experimentation.
     """
 
     def __init__(
@@ -463,6 +471,15 @@ class LocalTransparencyLog(TransparencyLog):
     ) -> None:
         if not signer.key_id:
             raise SCITTError("transparency log key id must not be empty")
+        if trusted_issuers is None:
+            warnings.warn(
+                "LocalTransparencyLog without trusted_issuers is PERMISSIVE: "
+                "any structurally-valid statement (including forged ones) will "
+                "register and receive a genuine receipt. Pass an explicit "
+                "trusted_issuers set in production.",
+                UserWarning,
+                stacklevel=2,
+            )
         self._signer = signer
         self._trusted_issuers = (
             dict(trusted_issuers) if trusted_issuers is not None else None
