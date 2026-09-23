@@ -53,11 +53,13 @@ shortcuts.
 from __future__ import annotations
 
 import base64
+import copy
 import hashlib
 import hmac
 import json
 import secrets
 import struct
+import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
@@ -308,6 +310,16 @@ def _validate_presented_envelope(
       (policy_ref == the guardian's constitution hash), and when
       (validity window around the mint moment). Post-decision substitution
       of args, principal, or policy is denied.
+    * verb/target are the PRESENTING PLANE's labels (e.g. the shell shim's
+      ``verb="exec"`` / ``target="trial-cmd"`` for a guardian event with
+      ``action="shell.exec"`` / ``resource="sandbox://host"``). The
+      guardian deliberately does NOT equate them with the acs-plane
+      ``event.action`` / ``event.resource``: no cross-plane verb/target
+      mapping exists in the protocol, so there is no ground truth to
+      validate against (red-team-2 P5, documented residual risk — see
+      docs/THREAT_MODEL.md item 12). The what/where binding end-to-end is
+      ``args_digest`` → ``action_digest`` → the PEP's digest→command
+      registry, which refuses digests it never registered.
     * The remaining chain links complete outside this function: the store's
       ``envelope.action_digest == payload.action_digest`` binding ties the
       minted capability to this exact envelope, the PEP's plane check ties
@@ -424,6 +436,7 @@ class AcsGuardian:
         capability_ttl_s: float = 300.0,
         audience: str = "anchor-pep",
         now_fn=None,
+        wire_allowed_subjects: frozenset[str] | set[str] | None = None,
     ):
         if not isinstance(psk, (bytes, bytearray)) or len(psk) < 16:
             raise ValueError("psk must be bytes of length >= 16")
@@ -447,6 +460,24 @@ class AcsGuardian:
         self._audience = audience
         self._now_fn = now_fn
         self._seen_nonces: dict[str, datetime] = {}
+        # Guards _seen_nonces AND _pending against concurrent wire/in-process
+        # access (red-team-2 P1b: _prune_nonces raised RuntimeError under
+        # concurrency; the lock also closes the check-then-set race on
+        # _seen_nonces structurally). Held only for short dict operations —
+        # never while running decision_fn.
+        self._nonce_lock = threading.Lock()
+        # Optional wire subject allowlist (red-team-2 P3 mitigation, default
+        # OFF). The wire protocol is HMAC-PSK: any PSK holder can assert ANY
+        # subject. When set, wire frames whose event subject is not in the
+        # allowlist are DENY'd at the authentication layer. This is a
+        # deployment backstop, not channel identity — production MUST bind
+        # subjects to a mutually-authenticated channel (mTLS/DPoP), as the
+        # module docstring's production note requires.
+        self._wire_allowed_subjects = (
+            frozenset(wire_allowed_subjects)
+            if wire_allowed_subjects is not None
+            else None
+        )
         self._pending: dict[str, dict[str, Any]] = {}
         # Daemon threads; a timed-out decision_fn keeps running in the
         # background but its result is discarded (documented limitation:
@@ -461,7 +492,11 @@ class AcsGuardian:
 
     @property
     def pending(self) -> dict[str, dict[str, Any]]:
-        return dict(self._pending)
+        # Deep copy: callers must not be able to alias and mutate the
+        # stored ASK/DEFER intents pre-approval (red-team-2 P4). A shallow
+        # copy shares the inner dicts, letting a caller rewrite a stored
+        # intent's params through the public property before resolve.
+        return copy.deepcopy(self._pending)
 
     def _now(self) -> datetime:
         now = self._now_fn() if self._now_fn else datetime.now(timezone.utc)
@@ -479,6 +514,15 @@ class AcsGuardian:
 
         Raises DecisionTimeoutError on timeout; any other exception from the
         function propagates to the caller (which converts it to DENY).
+
+        LIMITATION (red-team-2 P8): the budget is enforced via
+        ``ThreadPoolExecutor.result(timeout=...)``. A CPU-bound,
+        GIL-holding decision function (e.g. catastrophic-backtracking
+        regex in a policy rule) can delay the timeout's own enforcement
+        and pin worker threads; the outcome still fails closed (DENY) but
+        availability degrades. Production MUST isolate decision logic in a
+        separate process (see class docstring / docs/THREAT_MODEL.md item
+        11) — in-process timeouts are a backstop, not a guarantee.
         """
         future = self._executor.submit(self._decision_fn, event)
         try:
@@ -715,6 +759,16 @@ class AcsGuardian:
     # -- wire path ----------------------------------------------------------
 
     def _prune_nonces(self, now: datetime) -> None:
+        """Thread-safe nonce pruning (acquires the nonce lock)."""
+        with self._nonce_lock:
+            self._prune_nonces_locked(now)
+
+    def _prune_nonces_locked(self, now: datetime) -> None:
+        # Caller MUST hold self._nonce_lock. Kept separate so the wire
+        # path can prune + check + record in a single critical section.
+        # Red-team-2 P1b: the unlocked version raised RuntimeError
+        # ("dictionary changed size during iteration") under concurrent
+        # load and spuriously DENY'd legitimate requests.
         cutoff = now - 2 * self._window
         stale = [n for n, ts in self._seen_nonces.items() if ts < cutoff]
         for n in stale:
@@ -739,12 +793,27 @@ class AcsGuardian:
         now = self._now()
         if abs((now - ts).total_seconds()) > self._window.total_seconds():
             raise WireAuthError("wire timestamp outside replay window")
-        self._prune_nonces(now)
-        if body["nonce"] in self._seen_nonces:
-            raise WireAuthError("wire nonce already seen: replay denied")
-        self._seen_nonces[body["nonce"]] = ts
+        # The whole nonce check-then-set (prune, seen-check, record) is one
+        # critical section: red-team-2 P1b (RuntimeError / spurious DENYs)
+        # and the P1 same-nonce race window are both closed structurally.
+        with self._nonce_lock:
+            self._prune_nonces_locked(now)
+            if body["nonce"] in self._seen_nonces:
+                raise WireAuthError("wire nonce already seen: replay denied")
+            self._seen_nonces[body["nonce"]] = ts
         if not isinstance(body["payload"], dict):
             raise WireAuthError("event payload must be a JSON object")
+        if self._wire_allowed_subjects is not None:
+            # Red-team-2 P3 backstop (default off): the PSK channel does not
+            # bind the asserted subject to a channel identity, so a PSK
+            # holder can name any subject. Deployments with a known subject
+            # set can DENY everything else at the wire layer. Production
+            # MUST still use a mutually-authenticated channel (mTLS/DPoP).
+            subject = body["payload"].get("subject")
+            if subject not in self._wire_allowed_subjects:
+                raise WireAuthError(
+                    f"wire subject {subject!r} not in wire_allowed_subjects"
+                )
         return body["payload"]
 
     def _sign_decision_frame(self, decision: GuardianDecision) -> bytes:
