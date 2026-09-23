@@ -56,6 +56,7 @@ __all__ = [
     "KIND_READ",
     "CAPABILITY_VERSION",
     "DEFAULT_REVOCATION_STALENESS_S",
+    "FUTURE_ISSUANCE_SKEW_S",
     "issue_mandate",
     "issue_execution",
     "issue_read",
@@ -75,6 +76,13 @@ _KINDS = (KIND_MANDATE, KIND_EXECUTION, KIND_READ)
 #: refuses consumption when its revocation view is older than the
 #: capability's bound. See store.py for the CAP trade-off.
 DEFAULT_REVOCATION_STALENESS_S = 300
+
+#: Allowed future skew (seconds) between a capability's ``issued_at`` and
+#: the verifier's clock. Minter and verifier clocks legitimately disagree
+#: by seconds (separate processes/hosts, test harnesses that pin ``now``);
+#: a small leeway is standard practice (JWT leeway). Anything beyond this
+#: is a misissued or hostile capability and fails closed (red-team-2 P9).
+FUTURE_ISSUANCE_SKEW_S = 300
 
 
 class CapabilityError(ValueError):
@@ -397,8 +405,11 @@ def verify_capability(
 
     Checks: COSE structure, EdDSA allowlist, empty unprotected header, known
     kid, signature, payload schema, version, kind, digest/pubkey shape,
-    spend caveat sanity, nonce presence, and the validity window. No state
-    is consulted — one-use enforcement, revocation, and budgets are the
+    spend caveat sanity, nonce presence, and the validity window — including
+    that the capability was not issued in the future beyond a small clock-
+    skew leeway (red-team-2 P9: ``issued_at`` more than
+    ``FUTURE_ISSUANCE_SKEW_S`` ahead of now fails closed). No state is
+    consulted — one-use enforcement, revocation, and budgets are the
     store's job. Raises :class:`CapabilityError` on ANY failure.
     """
     try:
@@ -446,6 +457,12 @@ def verify_capability(
     expires_at = _parse_iso(payload.expires_at, "expires_at")
     if expires_at <= issued_at:
         raise CapabilityError("capability expires_at must be after issued_at")
+    # Red-team-2 P9: a capability minted with a far-future issued_at must
+    # not verify as valid at the real now. Fail closed, with a small skew
+    # leeway for legitimate minter/verifier clock disagreement (see
+    # FUTURE_ISSUANCE_SKEW_S).
+    if (issued_at - moment).total_seconds() > FUTURE_ISSUANCE_SKEW_S:
+        raise CapabilityError("capability issued_at is in the future")
     if moment > expires_at:
         raise CapabilityError("capability expired")
 
