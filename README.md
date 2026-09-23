@@ -2,7 +2,7 @@
 
 An open, model-agnostic runtime governor for AI agents. One invariant: no consequential autonomous action occurs unless a deterministic authority authorized that exact effect, through an unforgeable tightly-bounded capability; execution happens through an enforcement point the agent cannot bypass; the chain is independently verifiable later. A hardened ACS-compatible Guardian decides, every ALLOW mints a one-use holder-of-key capability bound to the exact action digest, a credential-brokering PEP executes, and SCITT-compatible (RFC 9421/9943) evidence makes the whole trail verifiable offline. Pure Python, stdlib + `cryptography` + `pydantic` only.
 
-Release `v1.0.0` (annotated tag on commit `6608fd1`). This is a research-grade artifact: the limitations below are real and stated, not footnoted.
+Release `v1.0.0` (annotated tag on commit `b1949cc`). This is a research-grade artifact: the limitations below are real and stated, not footnoted.
 
 ## Named guarantees
 
@@ -53,7 +53,7 @@ Twelve named guarantees, each with threat / precondition / attack / invariant / 
 Requires Python ≥ 3.12 and the test dependencies (`pytest`).
 
 ```sh
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[test]"
 pytest
