@@ -119,3 +119,16 @@ Any failure aborts the transaction: nothing is consumed, no budget moves.
   it performs no transition.
 * Cross-process WebAuthn challenge replay, trust-bundle correctness, and challenge
   freshness are coordinator duties (see `docs/THREAT_MODEL.md` residual risks).
+* Cross-plane verb/target mapping (v1.0.0 versioned limitation): the
+  Guardian<->shell PEP integration seam is cross-plane by design — the
+  presenting plane's `verb`/`target` (e.g. shell `verb="exec"`) are NOT
+  equated with the acs-plane `event.action`/`event.resource` (e.g.
+  `action="shell.exec"`), because no cross-plane mapping exists in the
+  protocol and the guardian has no ground truth to validate against
+  (`src/anchor_v1/acs_guardian.py::_validate_presented_envelope` binds
+  principal, exact args, policy ref, and validity window only). Each plane
+  validates strictly within its own scope. Cross-plane translation is a
+  deployment/orchestrator responsibility until v1.1 (see
+  `docs/THREAT_MODEL.md` item 12). Tripwire test
+  `tests/test_redteam2_fixes.py::test_p5_cross_plane_envelope_allowed_by_design`
+  locks this behavior.

@@ -163,4 +163,16 @@ that pins it. Last verified against the codebase and the 1017/1017 green suite o
     the minted capability would still be bound to the exact decided args.
     Recommended follow-up: an explicit per-deployment verb/target
     allowlist or plane mapping if deployments need the guardian to
-    second-guess shim labels.
+    second-guess shim labels. Deployment pattern (concrete): keep an
+    explicit allowlist table keyed by (plane, verb, target-shape) -> the
+    acs-plane (action, resource) pairs it may present for, owned and
+    versioned by the deployment (not the core protocol). Entries are
+    exact strings or linear-time matchers only — never backtracking
+    regexes (catastrophic-backtracking class, see item 11). At the seam,
+    the deployment shim rejects any presented envelope whose
+    (verb, target) has no allowlist entry BEFORE forwarding to the
+    guardian; unmapped pairs default to DENY. The allowlist lives in
+    deployment config (auditable, change-controlled), is loaded once at
+    startup, and any runtime mutation fails closed. This is the
+    deployment's compensating control until the v1.1 Seam Mapping
+    Provider standardizes it.

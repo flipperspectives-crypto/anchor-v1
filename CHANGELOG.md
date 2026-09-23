@@ -88,3 +88,21 @@ probes denied (replay -> DoubleSpendError, forgery -> PEPError, ungoverned
 execution -> PEPError, post-approval tampering -> PEPError). 15/15 SCITT
 evidence statements verified offline, chain intact. GitHub push SKIPPED
 (`gh` not logged in; no repos created, nothing faked).
+
+## v1.0.0 — Known limitations (shipped deliberately)
+
+- **P5 cross-plane seam (documented residual).** The Guardian<->shell PEP
+  integration seam does not enforce verb/target equality across planes: a
+  shell-plane `verb="exec"`/`target="trial-cmd"` is accepted for a guardian
+  event `action="shell.exec"`/`resource="sandbox://host"` by design.
+  `_validate_presented_envelope` (`src/anchor_v1/acs_guardian.py`) binds
+  principal, exact args (`args_digest`), policy ref, and validity window;
+  verb/target are the presenting plane's labels and have no protocol-level
+  ground truth to equate against. Each plane validates strictly within its
+  own scope; cross-plane translation is the deployment/orchestrator's
+  responsibility until v1.1 (see `docs/THREAT_MODEL.md` item 12 and
+  `docs/SPEC.md` §4). Tripwire test
+  `tests/test_redteam2_fixes.py::test_p5_cross_plane_envelope_allowed_by_design`
+  locks this behavior. This does not block publication: the enforced
+  backstops (`args_digest` -> `action_digest` -> the PEP's digest->command
+  registry) bind exactly what runs.
