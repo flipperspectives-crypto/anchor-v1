@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+# Virtualenvs
+.venv/
+venv/
+# Test caches
+.pytest_cache/
+.coverage
+htmlcov/
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+# Local trial artifacts (not part of the release)
+trial-scratch/
