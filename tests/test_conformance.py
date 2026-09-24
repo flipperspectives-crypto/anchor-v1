@@ -267,11 +267,24 @@ def test_guarantee_authz_toctou_007():
         holder_signer=holder_signer,
         trusted=trusted,
     )
-    store.write_state({ALICE: 50})  # ATTACK: state moves after prepare
+    store.write_state({ALICE: 50})  # ATTACK 1: state moves after prepare
     with pytest.raises(StateChangedError, match="state moved since prepare"):
         do_commit(store, trusted, bundle)
     assert store.capability_state(bundle["payload"].capability_id) == "ISSUED"
     assert store.read_state([ALICE, BOB]).values == {ALICE: 50, BOB: 100}
+
+    # ATTACK 2: unrelated key modification after prepare still moves state version and denies commit.
+    store.write_state({ALICE: 500, BOB: 100})
+    bundle2 = commit_materials(
+        store=store,
+        authority_signer=authority_signer,
+        holder_signer=holder_signer,
+        trusted=trusted,
+    )
+    store.write_state({"unrelated_key": "changed"})
+    with pytest.raises(StateChangedError, match="state moved since prepare"):
+        do_commit(store, trusted, bundle2)
+    assert store.capability_state(bundle2["payload"].capability_id) == "ISSUED"
 
 
 # ===========================================================================
