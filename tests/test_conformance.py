@@ -742,11 +742,11 @@ def test_guarantee_agid_redos_015():
 def test_guarantee_agid_spendtype_016():
     """GUARANTEE-ID: AGID-SPENDTYPE-016
     THREAT: An attacker hand-rolls a validly self-signed assertion whose
-        max_spend is inf/nan (bypassing model validation via raw JSON),
+        max_spend is inf/-inf/nan (bypassing model validation via raw JSON),
         hoping a raw ValueError escapes or the assertion authorizes spend.
     PRECONDITION: A hostile assertion with non-finite max_spend, planted
         either directly for verification or inside the registry store.
-    ATTACK: (a) verify_assertion() on the hostile message. (b) A hostile
+    ATTACK: (a) verify_assertion() on the hostile message across inf/-inf/nan. (b) A hostile
         assertion (pattern "**", max_spend=inf) planted in the registry
         store, then authorize_capability_claim() for an arbitrary target.
     INVARIANT: Non-finite max_spend is dead on arrival: verification raises
@@ -761,9 +761,10 @@ def test_guarantee_agid_spendtype_016():
         assertion still authorizes.
     """
     signer = agent_signer()
-    _, message = _nonfinite_assertion_message(signer, float("inf"))
-    with pytest.raises(AgentIdentityError):
-        verify_assertion(message, now=AGENT_NOW)
+    for spend in (float("inf"), float("-inf"), float("nan")):
+        _, message = _nonfinite_assertion_message(signer, spend)
+        with pytest.raises(AgentIdentityError):
+            verify_assertion(message, now=AGENT_NOW)
 
     did, good_message = _self_assertion(signer)
     _, bad_message = _nonfinite_assertion_message(
