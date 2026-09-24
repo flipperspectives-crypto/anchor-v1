@@ -635,7 +635,7 @@ def test_guarantee_stepup_xquorum_014():
     ATTACK: (a) The SAME assertion bytes, minted for action A, are replayed
         into a second quorum for action B through a FRESH verifier while A
         is still live. (b) A second live quorum binds the same challenge C
-        and collects its first approval.
+        and collects its first approval. (c) A challenge is reused after finalize.
     INVARIANT: Challenges are one-time-use process-wide: the in-flight
         registry rejects a second live quorum sharing a challenge, and the
         burned ledger rejects any reuse after finalize.
@@ -643,7 +643,7 @@ def test_guarantee_stepup_xquorum_014():
         tests/test_stepup.py::TestInFlightChallenges::
         test_cross_action_replay_before_first_finalize_rejected and
         test_two_live_quorums_sharing_challenge_second_approve_raises.
-    EXPECTED RECEIPT: Both replays raise QuorumError; the attacker's quorum
+    EXPECTED RECEIPT: Replays raise QuorumError; the attacker's quorum
         records zero approvals and is not satisfied; the honest quorum is
         unaffected.
     """
@@ -683,6 +683,17 @@ def test_guarantee_stepup_xquorum_014():
                    digest, stepup_ctx())
     assert q2.approval_count == 0
     assert not q2.is_satisfied()
+
+    # Half (c): challenge reuse after finalize (burned challenge).
+    q1.approve(auth2, challenge2,
+               auth2.create_assertion(challenge2, action_digest=digest),
+               digest, stepup_ctx())
+    q1.finalize(Ed25519Signer.generate("q-issuer"))
+    q3 = QuorumApproval(1, 1)
+    with pytest.raises(QuorumError, match="one-time-use"):
+        q3.approve(auth1, challenge2,
+                   auth1.create_assertion(challenge2, action_digest=digest),
+                   digest, stepup_ctx())
 
 
 # ===========================================================================
