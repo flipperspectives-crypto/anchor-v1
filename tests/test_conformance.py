@@ -822,7 +822,7 @@ def test_guarantee_deleg_depth_017():
     assert not result.scope_allows("shell.exec",
                                    "https://api.example.com/v1/status")
 
-    # ATTACK: hop 2 (signed by the real hop-2 key, off-protocol) widens
+    # ATTACK 1: hop 2 (signed by the real hop-2 key, off-protocol) widens
     # actions beyond hop 1's grant. Verification must refuse it.
     forged = dict(chain[1].payload)
     forged["delegation_id"] = "del-forged-conf"
@@ -836,3 +836,17 @@ def test_guarantee_deleg_depth_017():
     evil = _forge(forged, hop2)
     with pytest.raises(DelegationError):
         delegation_verify(chain[:2] + [evil], registry, trusted)
+
+    # ATTACK 2: hop 2 attempts to widen resource prefixes (sibling prefix / unconstrained prefix).
+    forged_prefix = dict(chain[1].payload)
+    forged_prefix["delegation_id"] = "del-forged-prefix"
+    forged_prefix["parent_receipt_hash"] = receipt_hash(chain[1])
+    forged_prefix["delegator"] = hop2.key_id
+    forged_prefix["delegatee"] = attacker.key_id
+    forged_prefix["depth"] = 2
+    forged_prefix["scope"] = dict(forged_prefix["scope"])
+    forged_prefix["scope"]["resource_prefixes"] = ["https://api.example.com/v1-evil"]
+    forged_prefix["nonce"] = "cf" * 16
+    evil_prefix = _forge(forged_prefix, hop2)
+    with pytest.raises(DelegationError):
+        delegation_verify(chain[:2] + [evil_prefix], registry, trusted)
