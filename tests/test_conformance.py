@@ -692,34 +692,35 @@ def test_guarantee_stepup_xquorum_014():
 
 def test_guarantee_agid_redos_015():
     """GUARANTEE-ID: AGID-REDOS-015
-    THREAT: An attacker plants a pathological glob (``*a`` x 12) as a
-        capability target pattern; a backtracking matcher takes seconds per
+    THREAT: An attacker plants a pathological glob (``*a`` x 12 or repeated wildcard groups)
+        as a capability target pattern; a backtracking matcher takes seconds per
         authorization check (ReDoS), stalling the governor.
-    PRECONDITION: A target pattern with 12 ``*a`` groups and a 34-char
-        target, plus the ``**``-separated variant.
-    ATTACK: Match the pathological patterns; also present an overlong
-        pattern past the documented length bound.
-    INVARIANT: The glob engine is linear-time: pathological patterns
-        complete in well under 1s and match correctly; overlong patterns
-        fail closed (never match).
+    PRECONDITION: Target patterns with repeated wildcard groups and candidate targets,
+        plus overlong patterns and targets exceeding documented length bounds.
+    ATTACK: Match pathological wildcard patterns and overlong patterns/targets.
+    INVARIANT: The glob engine is linear-time: pathological patterns complete in well
+        under 1s and match correctly; overlong patterns or targets fail closed (False).
     TEST VECTOR: Re-executes the attack paths of
         tests/test_agent_identity.py::
         test_target_matches_pathological_star_groups_completes_fast,
         test_target_matches_pathological_double_star_groups_completes_fast,
         and test_target_matches_rejects_overlong_pattern_fail_closed.
-    EXPECTED RECEIPT: Both pathological matches complete in < 1.0s with
-        correct results; the overlong pattern returns False (fail closed).
+    EXPECTED RECEIPT: Pathological matches complete in < 1.0s with correct results;
+        overlong or malformed inputs return False (fail closed).
     """
     start = time.perf_counter()
     assert _target_matches("*a" * 12, "a" * 33 + "b") is False
     assert _target_matches("*a" * 12, "a" * 34) is True
     assert _target_matches("**a" * 12, "a" * 33 + "b") is False
     assert _target_matches("**a" * 12, "x/y/" + "a" * 34) is True
+    assert _target_matches("*a*b*c" * 8, "a" * 20 + "b" * 20 + "x") is False
     elapsed = time.perf_counter() - start
     assert elapsed < 1.0, f"glob matching took {elapsed:.2f}s (ReDoS?)"
-    from anchor_v1.agent_identity import _MAX_TARGET_PATTERN_LEN
+
+    from anchor_v1.agent_identity import _MAX_TARGET_LEN, _MAX_TARGET_PATTERN_LEN
 
     assert _target_matches("a" * (_MAX_TARGET_PATTERN_LEN + 1), "a") is False
+    assert _target_matches("**", "a" * (_MAX_TARGET_LEN + 1)) is False
 
 
 # ===========================================================================
