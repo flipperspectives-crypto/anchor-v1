@@ -386,6 +386,18 @@ class TestTransparentStatements:
         with pytest.raises(SCITTError, match="unknown kid"):
             verify_transparent_statement(transparent, trusted_issuers, trusted_logs)
 
+    def test_receipt_from_forked_log_squatting_canonical_kid_rejected(
+        self, issuer, log_signer, trusted_issuers, trusted_logs
+    ):
+        # LEDGER-FORK-009: Fork log uses the same kid "scitt-log-1" but a different Ed25519 key.
+        fork_signer = Ed25519Signer.generate("scitt-log-1")
+        fork_log = LocalTransparencyLog(fork_signer)
+        statement = make_statement(issuer)
+        receipt = fork_log.register(statement)
+        transparent = add_receipt(statement, receipt)
+        with pytest.raises(SCITTError, match="signature verification failed"):
+            verify_transparent_statement(transparent, trusted_issuers, trusted_logs)
+
     def test_tampered_statement_with_valid_receipt_rejected(
         self, issuer, log, trusted_issuers, trusted_logs
     ):
