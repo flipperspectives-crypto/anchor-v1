@@ -21,7 +21,7 @@ dependency of those three or an installed-but-unused package (listed below).
 
 | Package | Frozen version | Declared | Used for |
 |---|---|---|---|
-| pytest | 9.1.1 | `pytest>=8` (test extra) | The 1017-test suite |
+| pytest | 9.1.1 | `pytest>=8` (test extra) | The suite: 1044 collected (1043 pass, 1 xfail) |
 
 ## C. Transitive dependencies (installed, not directly imported)
 

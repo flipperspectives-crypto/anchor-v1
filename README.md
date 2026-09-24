@@ -36,7 +36,7 @@ Twelve named guarantees, each with threat / precondition / attack / invariant / 
 
 ## Test results
 
-1030 tests green (+1 documented strict xfail). Per wave: Waves 0–4 (authority core: deterministic policy evaluation, one-use capabilities, credential-brokering PEP, SCITT transparency log with 9 statement types) — 703 green; Wave 5 (enterprise adapters: native + Cedar/Rego-subset policy providers, SPIFFE/OIDC/Entra/Okta consume-only identity adapters, WebAuthn + m-of-n quorum step-up, `did:key` agent identity) — 1005/1005, 100+ adversarial attacks across 5 rounds with 18 bypasses found and closed, zero open; Wave 6 (conformance) — 1017/1017, 9/9 mutation checks; Wave 7 (Guardian↔PEP presented-envelope integration) — 1030 green, independent red team blocked 11/11 attacks. Reality trial: 5/5 real actions governed end-to-end (file write, append, git init/add/commit), 4/4 live bypass probes denied, 15/15 SCITT statements verified offline, tampered evidence rejected.
+1043 passed, 1 xfailed (1044 collected). Per wave: Waves 0–4 (authority core: deterministic policy evaluation, one-use capabilities, credential-brokering PEP, SCITT transparency log with 9 statement types) — 703 green; Wave 5 (enterprise adapters: native + Cedar/Rego-subset policy providers, SPIFFE/OIDC/Entra/Okta consume-only identity adapters, WebAuthn + m-of-n quorum step-up, `did:key` agent identity) — 1005/1005, 100+ adversarial attacks across 5 rounds with 18 bypasses found and closed, zero open; Wave 6 (conformance) — 1017/1017, 9/9 mutation checks; Wave 7 (Guardian↔PEP presented-envelope integration) — 1030 green, independent red team blocked 11/11 attacks; red-team-2 added 13 regression tests. Reality trial: 5/5 real actions governed end-to-end (file write, append, git init/add/commit), 4/4 live bypass probes denied, 15/15 SCITT statements verified offline, tampered evidence rejected.
 
 ## Honest limitations
 
@@ -46,7 +46,7 @@ Twelve named guarantees, each with threat / precondition / attack / invariant / 
 4. **Single-process linearizability only.** SQLite stands in for serializable Postgres; multi-node deployments untested.
 5. **Double-mint tripwire.** Minting the same presented envelope twice yields two consumable capability_ids (per-id one-use enforcement). Adjudicated not-exploitable (trusted-shim-only seam) and kept as a strict-xfail regression tripwire.
 6. **Tag is annotated, not PGP/Sigstore-signed.** The signing run-book (`docs/SIGSTORE.md`) is written; executing it needs the maintainer's identity.
-7. **No CI.** Verified locally on one machine, one Python (3.12.3), one day.
+7. **CI is one Ubuntu runner.** `.github/workflows/ci.yml` installs the SBOM pins on Python 3.12 and runs the suite plus a 1044-test collection floor. It does not run mutation checks, the adversary harness, or TLC, and it has no second OS. The v1.0.0 tag itself was verified on one machine, one Python (3.12.3), one day.
 
 ## Run the tests
 
@@ -65,4 +65,4 @@ Or, from the repo root with an existing venv:
 .venv/bin/pytest -q
 ```
 
-Expected result: `1030 passed, 1 xfailed` (the xfail is the double-mint tripwire, limitation 5). `pytest` config lives in `pyproject.toml` (`pythonpath = ["src"]`, `testpaths = ["tests"]`, `addopts = "-ra"`).
+Expected result: `1043 passed, 1 xfailed` (the xfail is the double-mint tripwire, limitation 5). The same command is what `.github/workflows/ci.yml` runs. `pytest` config lives in `pyproject.toml` (`pythonpath = ["src"]`, `testpaths = ["tests"]`, `addopts = "-ra"`).

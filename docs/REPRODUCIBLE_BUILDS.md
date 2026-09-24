@@ -35,35 +35,34 @@ cd anchor-v1
 .venv/bin/python -m pytest -q
 ```
 
-Expected result (as of 2026-09-23): **1017 passed** (collection alone:
-`python -m pytest --collect-only -q` reports `1017 tests collected`).
-The run above completed in ~4s on the reference VM.
+Expected result (verified 2026-09-24, Python 3.12.14): **1043 passed, 1 xfailed**
+(collection: `1044 tests collected`). The 2026-09-23 note of 1017 passed predates
+Wave 7 and the red-team-2 regression tests. That earlier reference-VM run
+completed in ~4s; the current suite took 7.31s on aarch64, most of it the two
+guardian timeout tests (`time.sleep(5)` cut off at `decision_timeout_s=0.2`).
 
 Pytest config is in `pyproject.toml` (`[tool.pytest.ini_options]`):
 `pythonpath = ["src"]`, `testpaths = ["tests"]`, `addopts = "-ra"`.
 
 ## 3. Test-count pinning (regression gate)
 
-There is **no CI workflow in the repo** (no `.github/` directory). Count pinning
-is procedural today, enforced by the coordinator at every milestone:
-
-1. Run the full suite: `python -m pytest -q`.
-2. Record the result in `LOG.md` (milestone lines, e.g. "Suite 1017/1017,
-   baseline 703/703 intact").
-3. A count that *decreases* or diverges from the previous milestone without an
-   explicit builder report explaining it is treated as a regression and blocks
-   the gate.
-
-The recommended machine-checkable form (to be wired into CI when it exists):
+`.github/workflows/ci.yml` runs this gate on every push to `anchor-v1` and on
+pull requests, on GitHub-hosted Ubuntu with Python 3.12 and the SBOM pins:
 
 ```bash
 n=$(python -m pytest --collect-only -q 2>/dev/null | tail -1 | grep -oE '^[0-9]+')
-test "$n" -ge 1017 || { echo "test count regression: $n < 1017"; exit 1; }
+test "$n" -ge 1044 || { echo "test count regression: $n < 1044"; exit 1; }
+python -m pytest -q
 ```
+
+The floor is the collected count (1043 passing + 1 strict xfail). A decrease
+without an explicit report explaining it fails the workflow. Milestone history
+before this workflow existed was recorded in `LOG.md` (for example "Suite
+1017/1017, baseline 703/703 intact").
 
 Count-only gates cannot detect weakened tests; the Wave 5 process paired the
 count gate with independent verifier re-runs, /tmp-copy mutation spot-checks,
-and red-team bypass attempts (see LOG.md).
+and red-team bypass attempts (see LOG.md). Those checks are not in CI.
 
 ## 4. Test determinism notes
 

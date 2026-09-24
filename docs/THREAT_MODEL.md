@@ -99,9 +99,12 @@ that pins it. Last verified against the codebase and the 1017/1017 green suite o
 4. **Cedar/Rego subsets are documented subsets, not full languages.** Policies written
    against full Cedar or full Rego semantics will fail to load; operators must know
    which constructs are rejected (`src/anchor_v1/policy_providers.py` docstring).
-5. **No CI workflow ships with the repo** (no `.github/`). Count pinning and gate
-   verdicts are procedural today (coordinator full-suite run + LOG.md milestones).
-   See `docs/REPRODUCIBLE_BUILDS.md`.
+5. **CI covers one runner.** `.github/workflows/ci.yml` runs on GitHub-hosted
+   Ubuntu with Python 3.12 and the SBOM pins (`cryptography==50.0.1`,
+   `pydantic==2.13.5`, `pytest==9.1.1`). It executes `pytest -q` and fails if
+   collection drops below 1044 tests. It does not run the mutation checks, the
+   adversary harness, TLC, or any OS other than Ubuntu. A count floor cannot
+   detect a weakened assertion. See `docs/REPRODUCIBLE_BUILDS.md`.
 6. **Nothing is signed yet.** This package ships no signatures; the Sigstore run-book
    in `docs/SIGSTORE.md` describes release-day signing, not an existing artifact.
 7. **Linearizability holds for one process only.** The `RLock` + `BEGIN IMMEDIATE`

@@ -106,3 +106,11 @@ evidence statements verified offline, chain intact. GitHub push SKIPPED
   locks this behavior. This does not block publication: the enforced
   backstops (`args_digest` -> `action_digest` -> the PEP's digest->command
   registry) bind exactly what runs.
+
+## CI (2026-09-24)
+
+`.github/workflows/ci.yml` on push to `anchor-v1` and on pull requests.
+Ubuntu, Python 3.12, SBOM pins (`cryptography==50.0.1`, `pydantic==2.13.5`,
+`pytest==9.1.1`). Collected-test floor 1044, then `pytest -q`. Local run
+on Python 3.12.14 (aarch64): `1043 passed, 1 xfailed`. The workflow does
+not run mutation checks, the adversary harness, or TLC.
