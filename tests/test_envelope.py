@@ -136,6 +136,14 @@ class TestCBORStrictness:
             cbor_loads(b"\x5f\x41\x00\xff")  # indefinite bytes
         with pytest.raises(CBORError):
             cbor_loads(b"\xbf\x61a\x01\xff")  # indefinite map
+        with pytest.raises(CBORError):
+            cbor_loads(b"\x7f\x61a\xff")      # indefinite text string
+
+    def test_reject_exceeded_recursion_depth(self):
+        # 65 nested arrays (header 0x81 = 1-item array) exceed max depth 64
+        deep = b"\x81" * 65 + b"\x00"
+        with pytest.raises(CBORError, match="nesting depth exceeded"):
+            cbor_loads(deep)
 
     def test_reject_misordered_map_keys(self):
         bad = b"\xa2" + b"\x62bb\x01" + b"\x61a\x02"  # "bb" before "a"
