@@ -592,29 +592,29 @@ def test_guarantee_id_svidpath_012():
 
 def test_guarantee_id_jwtexp_013():
     """GUARANTEE-ID: ID-JWTEXP-013
-    THREAT: A non-finite ``exp`` (Infinity) compares greater than any clock
-        time and never expires; NaN defeats every time comparison; an
-        absurdly large ``clock_skew`` silently disables expiry checking.
-    PRECONDITION: OIDC adapter with pinned issuer/audience and a signed JWT
-        (the token parses fine — JSON round-trips Infinity).
-    ATTACK: (a) A token with exp=+Infinity (and one with exp=NaN) is
-        presented for authentication. (b) The adapter is constructed with
-        clock_skew=inf and with clock_skew=10**18 seconds (> 24h).
+    THREAT: A non-finite or absurdly skewed time claim (exp/nbf/iat = inf/-inf/nan/out-of-bounds)
+        compares greater/smaller than clock times or defeats time comparisons; an
+        absurdly large or negative ``clock_skew`` silently disables expiry checking.
+    PRECONDITION: OIDC adapter with pinned issuer/audience and a signed JWT.
+    ATTACK: (a) Tokens with exp/nbf/iat set to non-finite or absurdly skewed values are
+        presented for authentication. (b) The adapter is constructed with invalid,
+        negative, non-finite, or >24h clock_skew.
     INVARIANT: Time claims must be finite and sane; clock_skew has a hard
         24h upper bound enforced at construction.
     TEST VECTOR: Re-executes the attack paths of
         tests/test_identity_adapters.py::test_attack_oidc_exp_infinity_rejected
         and test_fixb2_clock_skew_above_24h_rejected_at_construction.
-    EXPECTED RECEIPT: (a) authenticate() raises IdentityError for exp=inf
-        and exp=nan. (b) OidcAdapter construction raises ValueError for
-        clock_skew=inf and clock_skew=10**18.
+    EXPECTED RECEIPT: (a) authenticate() raises IdentityError for bad time claims.
+        (b) OidcAdapter construction raises ValueError for invalid clock_skew values.
     """
     adapter = OidcAdapter(jwks=JWKS, issuer=ISS, audience=AUD)
-    for bad_exp in (float("inf"), float("nan")):
-        token = _jwt("RS256", "rsa1", RSA_KEY, exp=bad_exp)
-        with pytest.raises(IdentityError):
-            adapter.authenticate(token)
-    for bad_skew in (float("inf"), 10**18):
+    bad_times = (float("inf"), float("-inf"), float("nan"), -1e18, 1e18, 1e300)
+    for bad_val in bad_times:
+        for claim_key in ("exp", "nbf", "iat"):
+            token = _jwt("RS256", "rsa1", RSA_KEY, **{claim_key: bad_val})
+            with pytest.raises(IdentityError):
+                adapter.authenticate(token)
+    for bad_skew in (float("inf"), float("-inf"), float("nan"), -1, 10**18, 86401, True):
         with pytest.raises(ValueError):
             OidcAdapter(jwks=JWKS, issuer=ISS, audience=AUD,
                         clock_skew=bad_skew)

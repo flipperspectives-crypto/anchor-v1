@@ -126,15 +126,20 @@ def _coerce_token_text(token: bytes | str) -> str:
     raise IdentityError("token must be bytes or str")
 
 
+_MIN_CLAIM_TIMESTAMP = 0.0
+_MAX_CLAIM_TIMESTAMP = 253402300799.0  # 9999-12-31T23:59:59Z
+
+
 def _as_number(value: Any, *, claim: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise IdentityError(f"JWT claim {claim!r} must be a JSON number")
     number = float(value)
     if not math.isfinite(number):
-        # Defense in depth: a non-finite exp (e.g. Infinity) would compare
-        # greater than any clock time and never expire. NaN would make every
-        # comparison False, silently defeating the check. Fail closed.
+        # Defense in depth: a non-finite exp (e.g. Infinity, -Infinity, NaN)
+        # would compare greater or smaller than any clock time or defeat comparison. Fail closed.
         raise IdentityError(f"JWT claim {claim!r} must be a finite number")
+    if number < _MIN_CLAIM_TIMESTAMP or number > _MAX_CLAIM_TIMESTAMP:
+        raise IdentityError(f"JWT claim {claim!r} is out of valid time bounds")
     return number
 
 
@@ -265,6 +270,7 @@ class OidcAdapter(IdentityAdapter):
             raise IdentityError("audience must be a non-empty string")
         if (
             not isinstance(clock_skew, (int, float))
+            or isinstance(clock_skew, bool)
             or not math.isfinite(clock_skew)
             or clock_skew < 0
             or clock_skew > _MAX_CLOCK_SKEW_SECONDS
