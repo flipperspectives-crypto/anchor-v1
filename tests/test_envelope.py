@@ -217,6 +217,24 @@ class TestCOSE:
         with pytest.raises(COSEError):
             cose_verify(tampered, {b"k": _pubkey(s)})
 
+    def test_cose_verify_rejects_extra_protected_header_labels(self):
+        s = _signer()
+        protected = cbor_dumps({1: -8, 4: b"test-key", 99: "extra_label"})
+        sig_structure = cbor_dumps(["Signature1", protected, b"", b"payload"])
+        sig = s._private_key.sign(sig_structure)
+        msg = cbor_dumps([protected, {}, b"payload", sig])
+        with pytest.raises(COSEError, match="exactly alg and kid"):
+            cose_verify(msg, {b"test-key": _pubkey(s)})
+
+    def test_cose_verify_rejects_non_map_protected_header(self):
+        s = _signer()
+        protected = cbor_dumps("not-a-map")
+        sig_structure = cbor_dumps(["Signature1", protected, b"", b"payload"])
+        sig = s._private_key.sign(sig_structure)
+        msg = cbor_dumps([protected, {}, b"payload", sig])
+        with pytest.raises(COSEError, match="protected header must be a map"):
+            cose_verify(msg, {b"test-key": _pubkey(s)})
+
 
 # ---------------------------------------------------------------------------
 # ActionEnvelope unit tests
@@ -435,6 +453,11 @@ class TestAdversarial:
         msg = cbor_dumps([protected, {1: -7}, b"payload", sig])  # alg smuggled outside
         with pytest.raises(COSEError, match="unprotected header must be empty"):
             cose_verify(msg, {b"test-key": _pubkey(s)})
+
+        # Non-map unprotected header must also be rejected
+        msg_bad_type = cbor_dumps([protected, "not-a-map", b"payload", sig])
+        with pytest.raises(COSEError, match="unprotected header must be a map"):
+            cose_verify(msg_bad_type, {b"test-key": _pubkey(s)})
 
     def test_attack_13_indefinite_length_cbor_rejected(self):
         """ATTACK-13: indefinite-length CBOR anywhere in the message."""

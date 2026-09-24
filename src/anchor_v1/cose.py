@@ -94,6 +94,25 @@ def cose_sign(
     return cbor_dumps([protected, {}, bytes(payload), signature])
 
 
+def _validate_cose_headers(protected: Any, unprotected: Any) -> tuple[int, bytes]:
+    """Validate protected and unprotected COSE header maps (ATTACK-12 / ATTACK-15). Fail-closed."""
+    if not isinstance(unprotected, dict):
+        raise COSEError("unprotected header must be a map")
+    if unprotected != {}:
+        raise COSEError("unprotected header must be empty")
+    if not isinstance(protected, dict):
+        raise COSEError("protected header must be a map")
+    if set(protected.keys()) != {_LABEL_ALG, _LABEL_KID}:
+        raise COSEError("protected header must contain exactly alg and kid")
+    alg = protected[_LABEL_ALG]
+    if alg != ALG_EDDSA:
+        raise COSEError(f"algorithm not allowed: {alg!r} (only EdDSA/-8)")
+    kid = protected[_LABEL_KID]
+    if not isinstance(kid, bytes):
+        raise COSEError("kid must be a byte string")
+    return alg, kid
+
+
 def cose_verify(
     message: bytes,
     trusted_keys: Mapping[bytes, Ed25519PublicKey],
@@ -123,25 +142,12 @@ def cose_verify(
     if not isinstance(signature, bytes):
         raise COSEError("signature must be a byte string")
 
-    # Hardening: nothing may ride outside the integrity-protected header.
-    if unprotected != {}:
-        raise COSEError("unprotected header must be empty")
-
     try:
         protected = cbor_loads(body_protected)
     except CBORError as exc:
         raise COSEError(f"malformed protected header: {exc}") from exc
-    if not isinstance(protected, dict):
-        raise COSEError("protected header must be a map")
-    if set(protected.keys()) != {_LABEL_ALG, _LABEL_KID}:
-        raise COSEError("protected header must contain exactly alg and kid")
 
-    alg = protected[_LABEL_ALG]
-    if alg != ALG_EDDSA:
-        raise COSEError(f"algorithm not allowed: {alg!r} (only EdDSA/-8)")
-    kid = protected[_LABEL_KID]
-    if not isinstance(kid, bytes):
-        raise COSEError("kid must be a byte string")
+    alg, kid = _validate_cose_headers(protected, unprotected)
 
     key = trusted_keys.get(kid)
     if key is None:
