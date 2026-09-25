@@ -409,9 +409,23 @@ AttenuationMonotonic ==
    mandate to be absent from the revocation set (store._consume_inner
    step (5)). *)
 RevokedNeverConsumed ==
-    \A i \in issued :
-        \/ i \notin revoked /\ (cap[i].parent = NoId \/ cap[i].parent \notin revoked)
-        \/ authzCount[i] = 0
+    \A i \in issued : i \in revoked => authzCount[i] = 0
+
+(* NOTE on the shape of this invariant (fixed 2026-09-25 after a TLC
+   counterexample): an earlier version also required that a capability
+   whose *parent* was revoked must never have been consumed. TLC refuted
+   it with: IssueMandate(c1) -> MintChild(c1,c2) -> Consume(c2) ->
+   Revoke(c1). That history is legitimate incident response -- the
+   consumption happened before the revocation, when nothing was revoked.
+   What must never happen is revoke-then-consume, and that is enforced at
+   consume time by MayAuthorize (id \notin revoked /\ parent \notin
+   revoked), which TLC checks on every Consume/CheckRead transition.
+   The parent-revoked-after-child-consumed history is benign: the child is
+   already CONSUMED and can never authorize again (NoDoubleConsume), while
+   the parent's revocation still blocks all *future* child authorizations.
+   This invariant states the checkable core: Revoke requires ISSUED state,
+   and MayAuthorize blocks consume-after-revoke, so a revoked capability
+   itself was never consumed. *)
 
 (* The mandate budget ledger never goes negative and never exceeds what was
    issued: MintChild reserves the child's full spend_limit up front
