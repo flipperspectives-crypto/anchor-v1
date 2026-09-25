@@ -2,7 +2,6 @@
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
-
 [project]
 name = "anchor-v1"
 version = "1.1.0"
@@ -13,18 +12,14 @@ dependencies = [
   "pydantic>=2.6",
 ]
 
-
 [project.optional-dependencies]
 test = ["pytest>=8"]
-
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
-
 [tool.setuptools.packages.find]
 where = ["src"]
-
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
