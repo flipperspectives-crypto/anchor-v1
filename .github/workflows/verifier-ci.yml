@@ -35,8 +35,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-audit and cargo-deny
         run: |
-          cargo install --locked cargo-audit --version 0.22
-          cargo install --locked cargo-deny --version 0.20
+          cargo install --locked cargo-audit --version ^0.22
+          cargo install --locked cargo-deny --version ^0.20
       - name: cargo audit
         # NOTE: `cargo audit` always reads the committed Cargo.lock; it takes
         # no --locked flag. The test job's `cargo ... --locked` invocations
@@ -56,7 +56,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-vet
-        run: cargo install --locked cargo-vet --version 0.10
+        run: cargo install --locked cargo-vet --version ^0.10
       - name: cargo vet
         run: cargo vet --locked
 
