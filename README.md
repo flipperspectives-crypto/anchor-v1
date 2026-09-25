@@ -40,7 +40,7 @@ Twelve named guarantees, each with threat / precondition / attack / invariant / 
 
 ## Honest limitations
 
-1. **Rust/WASM offline verifier unbuilt.** No Rust toolchain on the build machine. The Python verifier stands in; recorded as a residual risk.
+1. **Rust/WASM offline verifier built and integrated.** The pure-Rust verifier lives at `rust/verifier/` (native CLI + `wasm-bindgen` bindings, no network/signing), with P0 security hardening (strict Ed25519, decoder limits, locked supply chain) and CI in `.github/workflows/verifier-ci.yml`. Cross-tested against Python-generated fixtures. The Python verifier remains the reference implementation.
 2. **TLC model check not executed.** No Java on the build machine. Spec and run-book exist; nobody has run them.
 3. **Cedar/Rego are pure-Python subsets.** Documented subsets, not the real engines. Do not claim full Cedar/OPA compatibility.
 4. **Single-process linearizability only.** SQLite stands in for serializable Postgres; multi-node deployments untested.

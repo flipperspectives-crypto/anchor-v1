@@ -1,0 +1,37 @@
+{
+ "valid": {
+  "pubkey_b64": "+kg0FH9uaQw2k+/2EzYEZAPNiuKhTzGzxAc1hWkjlWU=",
+  "capability_id": "cap_0123456789abcdef",
+  "challenge_b64": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=",
+  "proof_b64": "f6F+6Svo0RGmMXgUNAP4h2ipNagwwRUvmXgH7OZpsWb1WoQ2MkXUEVpE0PH6Jg/4h8kW2xldkkb9fI8WWdQFDQ==",
+  "expected": true
+ },
+ "wrong_challenge": {
+  "pubkey_b64": "+kg0FH9uaQw2k+/2EzYEZAPNiuKhTzGzxAc1hWkjlWU=",
+  "capability_id": "cap_0123456789abcdef",
+  "challenge_b64": "AgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICE=",
+  "proof_b64": "f6F+6Svo0RGmMXgUNAP4h2ipNagwwRUvmXgH7OZpsWb1WoQ2MkXUEVpE0PH6Jg/4h8kW2xldkkb9fI8WWdQFDQ==",
+  "expected": false
+ },
+ "wrong_key": {
+  "pubkey_b64": "GX9rI+FshTLGq8g4+s1ep4m+DHaykgM0A5v6iz02jWE=",
+  "capability_id": "cap_0123456789abcdef",
+  "challenge_b64": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=",
+  "proof_b64": "f6F+6Svo0RGmMXgUNAP4h2ipNagwwRUvmXgH7OZpsWb1WoQ2MkXUEVpE0PH6Jg/4h8kW2xldkkb9fI8WWdQFDQ==",
+  "expected": false
+ },
+ "tampered_proof": {
+  "pubkey_b64": "+kg0FH9uaQw2k+/2EzYEZAPNiuKhTzGzxAc1hWkjlWU=",
+  "capability_id": "cap_0123456789abcdef",
+  "challenge_b64": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=",
+  "proof_b64": "fqF+6Svo0RGmMXgUNAP4h2ipNagwwRUvmXgH7OZpsWb1WoQ2MkXUEVpE0PH6Jg/4h8kW2xldkkb9fI8WWdQFDQ==",
+  "expected": false
+ },
+ "empty_challenge": {
+  "pubkey_b64": "+kg0FH9uaQw2k+/2EzYEZAPNiuKhTzGzxAc1hWkjlWU=",
+  "capability_id": "cap_0123456789abcdef",
+  "challenge_b64": "",
+  "proof_b64": "f6F+6Svo0RGmMXgUNAP4h2ipNagwwRUvmXgH7OZpsWb1WoQ2MkXUEVpE0PH6Jg/4h8kW2xldkkb9fI8WWdQFDQ==",
+  "expected": false
+ }
+}

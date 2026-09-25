@@ -1,0 +1,43 @@
+# cargo-deny configuration (P0 supply-chain gate, 2026-09-25 audit).
+# `cargo deny check` runs in CI (.github/workflows/verifier-ci.yml).
+
+[graph]
+all-features = false
+no-default-features = false
+
+[advisories]
+db-path = "~/.cargo/advisory-dbs"
+db-urls = ["https://github.com/RustSec/advisory-db"]
+yanked = "deny"
+ignore = []
+
+[licenses]
+# Allow-list generated from the 2026-09-25 dependency tree (all permissive).
+# Re-run `cargo deny check` after any dependency change; add new licenses here
+# deliberately, never blindly.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-1-Clause",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Unicode-3.0",
+    "Unlicense",
+]
+confidence-threshold = 0.8
+exceptions = []
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+highlight = "all"
+allow = []
+deny = []
+skip = []
+skip-tree = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

@@ -1,0 +1,34 @@
+{
+ "valid": {
+  "message_b64": "hE+iAScESmNvc2Uta2V5LTGgUnsiaGVsbG8iOiAid29ybGQifVhAw0WK5cQcwZ0Ig12okpOMj0sY1Bfd/GXKJ5KnME6+XdvgBCz5UyfiybsJMsSjNgWoPtf284jehvA+E/345tBvCg==",
+  "payload_b64": "eyJoZWxsbyI6ICJ3b3JsZCJ9",
+  "kid_b64": "Y29zZS1rZXktMQ=="
+ },
+ "trusted_keys": {
+  "Y29zZS1rZXktMQ==": "Zr5+Myx6RTMyvZ0Kf32wVfXF7xoGraZtmLOftoEMRzo="
+ },
+ "tampered_sig": {
+  "message_b64": "hE+iAScESmNvc2Uta2V5LTGgUnsiaGVsbG8iOiAid29ybGQifVhAw0WK5cQcwZ0Ig12okpOMj0sY1Bfd/GXKJ5KnME6+XdvgBCz5UyfiybsJMsSjNgWoPtf284jehvA+E/345tBvCw=="
+ },
+ "tampered_payload": {
+  "message_b64": "hE+iAScESmNvc2Uta2V5LTGgUnsiaGVsbG8iOiAid29ybGQifVhAw0WK5cQcwZ0Ig12okpOMj0sY1Bfd/GXKJ5KnME6+XdvgBCz5UyfiybsJMsSjNgWoPtf284jeh/A+E/345tBvCg=="
+ },
+ "noncanonical_protected": {
+  "message_b64": "hFCiATgHBEpjb3NlLWtleS0xoFJ7ImhlbGxvIjogIndvcmxkIn1YQMNFiuXEHMGdCINdqJKTjI9LGNQX3fxlyieSpzBOvl3b4AQs+VMn4sm7CTLEozYFqD7X9vOI3obwPhP9+ObQbwo="
+ },
+ "wrong_kid": {
+  "message_b64": "hFCiAScES3Vua25vd24ta2lkoFJ7ImhlbGxvIjogIndvcmxkIn1YQFcFsnZaqZNq76d3jdcutT8vC2zRarsDKZcnI3Qd1FDk7lTqt/8oIZOONUJq9vSm8KbXMFq9NrjhV2mUVQyMQAo="
+ },
+ "extra_protected_field": {
+  "message_b64": "hFgZowEnBEpjb3NlLWtleS0xBWhzbXVnZ2xlZKBSeyJoZWxsbyI6ICJ3b3JsZCJ9WEDP11gQYZvzL4WUVHj0/r4YiF4BWVx/2B95gYwE0eo8+/LoRifSS1+EjM50+AAFIJMijBWh7poG8hDTaG9ND+YI"
+ },
+ "nonempty_unprotected": {
+  "message_b64": "hE+iAScESmNvc2Uta2V5LTGhAQJSeyJoZWxsbyI6ICJ3b3JsZCJ9WEDDRYrlxBzBnQiDXaiSk4yPSxjUF938ZconkqcwTr5d2+AELPlTJ+LJuwkyxKM2Bag+1/bziN6G8D4T/fjm0G8K"
+ },
+ "wrong_alg": {
+  "message_b64": "hE+iASYESmNvc2Uta2V5LTGgUnsiaGVsbG8iOiAid29ybGQifVhAp9QgRw74apOuiSr2099Pu4J152HKIBTlbLK21VJkCCRCkxIO3fNjh2bU6v/qHIMJ3d3P8Z9xQ7oy5FbfiC2RBw=="
+ },
+ "truncated": {
+  "message_b64": "hE+iAScESmNvc2Uta2V5LTGgUnsiaGVsbG8iOiAid29ybGQifVhAw0WK5cQcwZ0Ig12o"
+ }
+}
