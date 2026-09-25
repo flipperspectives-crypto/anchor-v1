@@ -783,6 +783,14 @@ def test_attack_oidc_nbf_infinity_rejected():
         ADAPTER.authenticate(token)
 
 
+def test_attack_oidc_out_of_bounds_time_claims_rejected():
+    for bad_val in (-1e18, 1e18, 1e300, -100.0, 1e12):
+        for claim_key in ("exp", "nbf", "iat"):
+            token = _jwt("RS256", "rsa1", RSA_KEY, **{claim_key: bad_val})
+            with pytest.raises(IdentityError):
+                ADAPTER.authenticate(token)
+
+
 def test_oidc_finite_float_exp_still_accepted():
     token = _jwt("RS256", "rsa1", RSA_KEY, exp=time.time() + 3600.5)
     assert ADAPTER.authenticate(token).subject_id == "user-123"

@@ -564,6 +564,21 @@ def test_target_matches_pathological_star_groups_completes_fast():
     assert elapsed < 1.0, f"glob matching took {elapsed:.2f}s (ReDoS?)"
 
 
+def test_target_matches_pathological_complex_wildcard_patterns_completes_fast():
+    """AGID-REDOS-015: Complex pathological wildcards (*a*b*c, **a**b**c) with long candidate
+    targets must complete in linear time without exponential or quadratic blowup."""
+    from anchor_v1.agent_identity import _target_matches
+
+    patterns = ["*a*b*c" * 8, "**a**b**c" * 8, "*?*?" * 15]
+    targets = ["a" * 100 + "b" * 100 + "c" * 100, "x/y/" * 20 + "z"]
+    start = time.perf_counter()
+    for pat in patterns:
+        for tgt in targets:
+            _target_matches(pat, tgt)
+    elapsed = time.perf_counter() - start
+    assert elapsed < 1.0, f"complex pathological glob matching took {elapsed:.2f}s (ReDoS?)"
+
+
 def test_target_matches_pathological_double_star_groups_completes_fast():
     """AI-N4: the `**`-separated variant must also be fast and correct."""
     from anchor_v1.agent_identity import _target_matches

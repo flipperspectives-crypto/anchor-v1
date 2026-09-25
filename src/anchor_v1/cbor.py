@@ -133,10 +133,15 @@ def cbor_dumps(value: Any) -> bytes:
 # Decoding (strict)
 # ---------------------------------------------------------------------------
 
+_MAX_RECURSION_DEPTH = 64
+
+
 class _Reader:
-    def __init__(self, data: bytes):
+    def __init__(self, data: bytes, max_depth: int = _MAX_RECURSION_DEPTH):
         self.data = data
         self.pos = 0
+        self.depth = 0
+        self.max_depth = max_depth
 
     def read(self, n: int) -> bytes:
         if self.pos + n > len(self.data):
@@ -177,6 +182,8 @@ class _Reader:
         return initial >> 5, initial & 0x1F
 
     def decode(self) -> Any:
+        if self.depth > self.max_depth:
+            raise CBORError(f"CBOR nesting depth exceeded limit of {self.max_depth}")
         major, ai = self.head()
         if ai == 31:
             raise CBORError("indefinite lengths are not allowed in deterministic CBOR")
@@ -196,11 +203,23 @@ class _Reader:
             except UnicodeDecodeError as exc:
                 raise CBORError("invalid UTF-8 in text string") from exc
         if major == 4:
-            return [self.decode() for _ in range(n)]
+            self.depth += 1
+            try:
+                return [self.decode() for _ in range(n)]
+            finally:
+                self.depth -= 1
         if major == 5:
-            return self._decode_map(n)
+            self.depth += 1
+            try:
+                return self._decode_map(n)
+            finally:
+                self.depth -= 1
         if major == 6:
-            return self._decode_tag(n)
+            self.depth += 1
+            try:
+                return self._decode_tag(n)
+            finally:
+                self.depth -= 1
         raise CBORError(f"unknown major type {major}")  # unreachable
 
     def _decode_simple(self, ai: int) -> Any:

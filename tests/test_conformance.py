@@ -267,11 +267,24 @@ def test_guarantee_authz_toctou_007():
         holder_signer=holder_signer,
         trusted=trusted,
     )
-    store.write_state({ALICE: 50})  # ATTACK: state moves after prepare
+    store.write_state({ALICE: 50})  # ATTACK 1: state moves after prepare
     with pytest.raises(StateChangedError, match="state moved since prepare"):
         do_commit(store, trusted, bundle)
     assert store.capability_state(bundle["payload"].capability_id) == "ISSUED"
     assert store.read_state([ALICE, BOB]).values == {ALICE: 50, BOB: 100}
+
+    # ATTACK 2: unrelated key modification after prepare still moves state version and denies commit.
+    store.write_state({ALICE: 500, BOB: 100})
+    bundle2 = commit_materials(
+        store=store,
+        authority_signer=authority_signer,
+        holder_signer=holder_signer,
+        trusted=trusted,
+    )
+    store.write_state({"unrelated_key": "changed"})
+    with pytest.raises(StateChangedError, match="state moved since prepare"):
+        do_commit(store, trusted, bundle2)
+    assert store.capability_state(bundle2["payload"].capability_id) == "ISSUED"
 
 
 # ===========================================================================
@@ -592,29 +605,29 @@ def test_guarantee_id_svidpath_012():
 
 def test_guarantee_id_jwtexp_013():
     """GUARANTEE-ID: ID-JWTEXP-013
-    THREAT: A non-finite ``exp`` (Infinity) compares greater than any clock
-        time and never expires; NaN defeats every time comparison; an
-        absurdly large ``clock_skew`` silently disables expiry checking.
-    PRECONDITION: OIDC adapter with pinned issuer/audience and a signed JWT
-        (the token parses fine — JSON round-trips Infinity).
-    ATTACK: (a) A token with exp=+Infinity (and one with exp=NaN) is
-        presented for authentication. (b) The adapter is constructed with
-        clock_skew=inf and with clock_skew=10**18 seconds (> 24h).
+    THREAT: A non-finite or absurdly skewed time claim (exp/nbf/iat = inf/-inf/nan/out-of-bounds)
+        compares greater/smaller than clock times or defeats time comparisons; an
+        absurdly large or negative ``clock_skew`` silently disables expiry checking.
+    PRECONDITION: OIDC adapter with pinned issuer/audience and a signed JWT.
+    ATTACK: (a) Tokens with exp/nbf/iat set to non-finite or absurdly skewed values are
+        presented for authentication. (b) The adapter is constructed with invalid,
+        negative, non-finite, or >24h clock_skew.
     INVARIANT: Time claims must be finite and sane; clock_skew has a hard
         24h upper bound enforced at construction.
     TEST VECTOR: Re-executes the attack paths of
         tests/test_identity_adapters.py::test_attack_oidc_exp_infinity_rejected
         and test_fixb2_clock_skew_above_24h_rejected_at_construction.
-    EXPECTED RECEIPT: (a) authenticate() raises IdentityError for exp=inf
-        and exp=nan. (b) OidcAdapter construction raises ValueError for
-        clock_skew=inf and clock_skew=10**18.
+    EXPECTED RECEIPT: (a) authenticate() raises IdentityError for bad time claims.
+        (b) OidcAdapter construction raises ValueError for invalid clock_skew values.
     """
     adapter = OidcAdapter(jwks=JWKS, issuer=ISS, audience=AUD)
-    for bad_exp in (float("inf"), float("nan")):
-        token = _jwt("RS256", "rsa1", RSA_KEY, exp=bad_exp)
-        with pytest.raises(IdentityError):
-            adapter.authenticate(token)
-    for bad_skew in (float("inf"), 10**18):
+    bad_times = (float("inf"), float("-inf"), float("nan"), -1e18, 1e18, 1e300)
+    for bad_val in bad_times:
+        for claim_key in ("exp", "nbf", "iat"):
+            token = _jwt("RS256", "rsa1", RSA_KEY, **{claim_key: bad_val})
+            with pytest.raises(IdentityError):
+                adapter.authenticate(token)
+    for bad_skew in (float("inf"), float("-inf"), float("nan"), -1, 10**18, 86401, True):
         with pytest.raises(ValueError):
             OidcAdapter(jwks=JWKS, issuer=ISS, audience=AUD,
                         clock_skew=bad_skew)
@@ -635,7 +648,7 @@ def test_guarantee_stepup_xquorum_014():
     ATTACK: (a) The SAME assertion bytes, minted for action A, are replayed
         into a second quorum for action B through a FRESH verifier while A
         is still live. (b) A second live quorum binds the same challenge C
-        and collects its first approval.
+        and collects its first approval. (c) A challenge is reused after finalize.
     INVARIANT: Challenges are one-time-use process-wide: the in-flight
         registry rejects a second live quorum sharing a challenge, and the
         burned ledger rejects any reuse after finalize.
@@ -643,7 +656,7 @@ def test_guarantee_stepup_xquorum_014():
         tests/test_stepup.py::TestInFlightChallenges::
         test_cross_action_replay_before_first_finalize_rejected and
         test_two_live_quorums_sharing_challenge_second_approve_raises.
-    EXPECTED RECEIPT: Both replays raise QuorumError; the attacker's quorum
+    EXPECTED RECEIPT: Replays raise QuorumError; the attacker's quorum
         records zero approvals and is not satisfied; the honest quorum is
         unaffected.
     """
@@ -684,6 +697,17 @@ def test_guarantee_stepup_xquorum_014():
     assert q2.approval_count == 0
     assert not q2.is_satisfied()
 
+    # Half (c): challenge reuse after finalize (burned challenge).
+    q1.approve(auth2, challenge2,
+               auth2.create_assertion(challenge2, action_digest=digest),
+               digest, stepup_ctx())
+    q1.finalize(Ed25519Signer.generate("q-issuer"))
+    q3 = QuorumApproval(1, 1)
+    with pytest.raises(QuorumError, match="one-time-use"):
+        q3.approve(auth1, challenge2,
+                   auth1.create_assertion(challenge2, action_digest=digest),
+                   digest, stepup_ctx())
+
 
 # ===========================================================================
 # AGID-REDOS-015 — pathological glob patterns
@@ -692,34 +716,35 @@ def test_guarantee_stepup_xquorum_014():
 
 def test_guarantee_agid_redos_015():
     """GUARANTEE-ID: AGID-REDOS-015
-    THREAT: An attacker plants a pathological glob (``*a`` x 12) as a
-        capability target pattern; a backtracking matcher takes seconds per
+    THREAT: An attacker plants a pathological glob (``*a`` x 12 or repeated wildcard groups)
+        as a capability target pattern; a backtracking matcher takes seconds per
         authorization check (ReDoS), stalling the governor.
-    PRECONDITION: A target pattern with 12 ``*a`` groups and a 34-char
-        target, plus the ``**``-separated variant.
-    ATTACK: Match the pathological patterns; also present an overlong
-        pattern past the documented length bound.
-    INVARIANT: The glob engine is linear-time: pathological patterns
-        complete in well under 1s and match correctly; overlong patterns
-        fail closed (never match).
+    PRECONDITION: Target patterns with repeated wildcard groups and candidate targets,
+        plus overlong patterns and targets exceeding documented length bounds.
+    ATTACK: Match pathological wildcard patterns and overlong patterns/targets.
+    INVARIANT: The glob engine is linear-time: pathological patterns complete in well
+        under 1s and match correctly; overlong patterns or targets fail closed (False).
     TEST VECTOR: Re-executes the attack paths of
         tests/test_agent_identity.py::
         test_target_matches_pathological_star_groups_completes_fast,
         test_target_matches_pathological_double_star_groups_completes_fast,
         and test_target_matches_rejects_overlong_pattern_fail_closed.
-    EXPECTED RECEIPT: Both pathological matches complete in < 1.0s with
-        correct results; the overlong pattern returns False (fail closed).
+    EXPECTED RECEIPT: Pathological matches complete in < 1.0s with correct results;
+        overlong or malformed inputs return False (fail closed).
     """
     start = time.perf_counter()
     assert _target_matches("*a" * 12, "a" * 33 + "b") is False
     assert _target_matches("*a" * 12, "a" * 34) is True
     assert _target_matches("**a" * 12, "a" * 33 + "b") is False
     assert _target_matches("**a" * 12, "x/y/" + "a" * 34) is True
+    assert _target_matches("*a*b*c" * 8, "a" * 20 + "b" * 20 + "x") is False
     elapsed = time.perf_counter() - start
     assert elapsed < 1.0, f"glob matching took {elapsed:.2f}s (ReDoS?)"
-    from anchor_v1.agent_identity import _MAX_TARGET_PATTERN_LEN
+
+    from anchor_v1.agent_identity import _MAX_TARGET_LEN, _MAX_TARGET_PATTERN_LEN
 
     assert _target_matches("a" * (_MAX_TARGET_PATTERN_LEN + 1), "a") is False
+    assert _target_matches("**", "a" * (_MAX_TARGET_LEN + 1)) is False
 
 
 # ===========================================================================
@@ -730,11 +755,11 @@ def test_guarantee_agid_redos_015():
 def test_guarantee_agid_spendtype_016():
     """GUARANTEE-ID: AGID-SPENDTYPE-016
     THREAT: An attacker hand-rolls a validly self-signed assertion whose
-        max_spend is inf/nan (bypassing model validation via raw JSON),
+        max_spend is inf/-inf/nan (bypassing model validation via raw JSON),
         hoping a raw ValueError escapes or the assertion authorizes spend.
     PRECONDITION: A hostile assertion with non-finite max_spend, planted
         either directly for verification or inside the registry store.
-    ATTACK: (a) verify_assertion() on the hostile message. (b) A hostile
+    ATTACK: (a) verify_assertion() on the hostile message across inf/-inf/nan. (b) A hostile
         assertion (pattern "**", max_spend=inf) planted in the registry
         store, then authorize_capability_claim() for an arbitrary target.
     INVARIANT: Non-finite max_spend is dead on arrival: verification raises
@@ -749,9 +774,10 @@ def test_guarantee_agid_spendtype_016():
         assertion still authorizes.
     """
     signer = agent_signer()
-    _, message = _nonfinite_assertion_message(signer, float("inf"))
-    with pytest.raises(AgentIdentityError):
-        verify_assertion(message, now=AGENT_NOW)
+    for spend in (float("inf"), float("-inf"), float("nan")):
+        _, message = _nonfinite_assertion_message(signer, spend)
+        with pytest.raises(AgentIdentityError):
+            verify_assertion(message, now=AGENT_NOW)
 
     did, good_message = _self_assertion(signer)
     _, bad_message = _nonfinite_assertion_message(
@@ -809,7 +835,7 @@ def test_guarantee_deleg_depth_017():
     assert not result.scope_allows("shell.exec",
                                    "https://api.example.com/v1/status")
 
-    # ATTACK: hop 2 (signed by the real hop-2 key, off-protocol) widens
+    # ATTACK 1: hop 2 (signed by the real hop-2 key, off-protocol) widens
     # actions beyond hop 1's grant. Verification must refuse it.
     forged = dict(chain[1].payload)
     forged["delegation_id"] = "del-forged-conf"
@@ -823,3 +849,17 @@ def test_guarantee_deleg_depth_017():
     evil = _forge(forged, hop2)
     with pytest.raises(DelegationError):
         delegation_verify(chain[:2] + [evil], registry, trusted)
+
+    # ATTACK 2: hop 2 attempts to widen resource prefixes (sibling prefix / unconstrained prefix).
+    forged_prefix = dict(chain[1].payload)
+    forged_prefix["delegation_id"] = "del-forged-prefix"
+    forged_prefix["parent_receipt_hash"] = receipt_hash(chain[1])
+    forged_prefix["delegator"] = hop2.key_id
+    forged_prefix["delegatee"] = attacker.key_id
+    forged_prefix["depth"] = 2
+    forged_prefix["scope"] = dict(forged_prefix["scope"])
+    forged_prefix["scope"]["resource_prefixes"] = ["https://api.example.com/v1-evil"]
+    forged_prefix["nonce"] = "cf" * 16
+    evil_prefix = _forge(forged_prefix, hop2)
+    with pytest.raises(DelegationError):
+        delegation_verify(chain[:2] + [evil_prefix], registry, trusted)
