@@ -109,12 +109,15 @@ that pins it. Last verified against the codebase and the 1017/1017 green suite o
 4. **Cedar/Rego subsets are documented subsets, not full languages.** Policies written
    against full Cedar or full Rego semantics will fail to load; operators must know
    which constructs are rejected (`src/anchor_v1/policy_providers.py` docstring).
-5. **CI covers one runner.** `.github/workflows/ci.yml` runs on GitHub-hosted
-   Ubuntu with Python 3.12 and the SBOM pins (`cryptography==50.0.1`,
-   `pydantic==2.13.5`, `pytest==9.1.1`). It executes `pytest -q` and fails if
-   collection drops below 1044 tests. It does not run the mutation checks, the
-   adversary harness, TLC, or any OS other than Ubuntu. A count floor cannot
-   detect a weakened assertion. See `docs/REPRODUCIBLE_BUILDS.md`.
+5. **CI covers one runner for the main matrix.** `.github/workflows/ci.yml` runs the
+   test matrix on GitHub-hosted Ubuntu, macOS, and Windows with Python 3.11/3.12/3.13
+   and the SBOM pins (`cryptography==50.0.1`, `pydantic==2.13.5`, `pytest==9.1.1`).
+   It executes `pytest -q` and fails if collection drops below 1044 tests, plus a
+   dedicated adversary job running all `test_attack_*` tests verbosely.
+   `.github/workflows/security-ci.yml` adds informational mutation testing (mutmut,
+   `continue-on-error` until the kill-rate baseline is calibrated) and a blocking
+   TLC job on the 2-id TLA+ model. A count floor cannot detect a weakened
+   assertion. See `docs/REPRODUCIBLE_BUILDS.md`.
 6. **Nothing is signed yet.** This package ships no signatures; the Sigstore run-book
    in `docs/SIGSTORE.md` describes release-day signing, not an existing artifact.
 7. **Linearizability holds for one process only.** The `RLock` + `BEGIN IMMEDIATE`
