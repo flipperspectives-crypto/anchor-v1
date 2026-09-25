@@ -1,0 +1,18 @@
+[package]
+name = "anchor-v1-verifier-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+anchor-v1-verifier = { path = ".." }
+
+# Prevent this from interfering with the workspace's locked supply chain:
+# the fuzz crate is NOT part of the verifier's Cargo.lock. It is built only
+# with nightly cargo-fuzz (`cargo fuzz run <target>`) and never shipped.
+[workspace]
+serde_json = "1"

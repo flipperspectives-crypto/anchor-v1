@@ -127,6 +127,26 @@ real Python `anchor_v1`; `tests/cross_verify.rs` asserts agreement):
   (RUSTSEC-2026-0009 / stack-exhaustion DoS in older parsers), with only the
   `parsing` + `std` features enabled.
 
+## Supply-chain hardening (P1, 2026-09-25)
+
+- **Pinned toolchain + MSRV.** `rust-toolchain.toml` pins Rust 1.89.0
+  (clippy + wasm32 target); `Cargo.toml` declares `rust-version = "1.88"`
+  (the floor set by `time 0.3.55`). CI builds on the pinned toolchain.
+- **Hardened release profile.** `[profile.release]` sets `lto = true`,
+  `panic = "abort"`, `strip = true`, and keeps `overflow-checks = true`:
+  a panic is preferable to a silent wraparound in verification code.
+- **`sha2` 0.11.** The direct dependency was bumped 0.10 -> 0.11, dropping
+  the duplicate 0.10 tree (and `version_check`) from the lockfile.
+- **`cargo vet` baseline.** `supply-chain/` carries the vet configuration;
+  CI runs `cargo vet --locked` so new dependencies must be audited.
+- **Vendored offline build.** CI vendors all dependencies and rebuilds
+  `--offline` from the vendor directory, proving the crate builds with no
+  network access.
+- **Fuzz targets.** `fuzz/` holds `cargo-fuzz` targets for the CBOR decoder
+  (`cbor_decode`) and the canonical-JSON roundtrip (`canonical_json`).
+  They require nightly (`cargo fuzz run <target>`); the decoders are written
+  so any input produces `Ok`/`Err`, never a panic.
+
 ## Testing
 
 ```sh
