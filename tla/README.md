@@ -7,10 +7,13 @@ properties — no double-consume, monotonic attenuation, revoked-means-denied,
 budget soundness, holder binding, expiry — can be checked exhaustively by
 the TLC model checker, independently of the Python test suite.
 
-> **Status:** the spec is written but has **not** been model-checked on this
-> machine (no Java/TLC available here, and no network installs permitted).
-> Follow the steps below to run it. It was written with extra-careful,
-> standard-only TLA+ syntax for exactly this reason.
+> **Status (2026-09-25):** model-checked with TLC 2026.09.25 (tla2tools
+> v1.8.0) on OpenJDK 21. The reduced 2-id model
+> (`authority-small.cfg`) was **checked exhaustively: 11.2M states
+> generated, 4.3M distinct, all 7 invariants hold** (6.5 min on 2 cores).
+> TLC also found and we fixed one over-strong invariant (see run notes).
+> The full 3-id `authority.cfg` exceeds this machine (60M+ states, thrashes
+> on 8 GB); it needs symmetry reduction or a bigger box.
 
 ## 1. Prerequisites
 
@@ -27,9 +30,10 @@ Save the following as `tla/authority.cfg` (same directory as
 `authority.tla`):
 
 ```cfg
-# TLC model configuration for authority.tla
-# (Minimal bounds: 3 capability ids, 2 effects, 2 holders. TLC exhausts
-#  this in seconds. See section 5 for how to scale up.)
+\* TLC model configuration for authority.tla
+\* (Full bounds: 3 capability ids, 2 effects, 2 holders. WARNING: this
+\*  generates 60M+ states and needs ~8 GB+ RAM or symmetry reduction;
+\*  for a model that exhausts on a laptop use authority-small.cfg.)
 INIT Init
 NEXT Next
 
@@ -74,9 +78,11 @@ A clean run ends with:
 Model checking completed. No error has been found.
 ```
 
-preceded by TLC's summary line reporting distinct states generated
-(expect on the order of tens of thousands of distinct states at the
-default bounds — it should finish in seconds on a laptop).
+preceded by TLC's summary line reporting distinct states generated.
+On the reduced 2-id model (`authority-small.cfg`: 2 ids, MaxBudget=1,
+MaxClock=2, MaxStale=1, MaxNonce=1, MaxEpoch=2) expect ~4.3M distinct
+states and ~6 minutes on 2 cores; the full 3-id `authority.cfg` is 60M+
+states and needs a bigger machine or symmetry reduction.
 
 A **failing** run instead prints:
 
@@ -116,8 +122,11 @@ Rules of thumb:
   (attenuation, double-consume, revocation) already manifest with a
   parent and one child.
 * `Ids`, `Effects`, and `Holders` are fully symmetric in the spec. For
-  larger bounds, add a `SYMMETRY` entry to the cfg permuting those sets;
-  TLC's standard symmetry reduction applies unchanged.
+  larger bounds, convert the cfg sets to TLC model values (`{c1, c2, c3}`
+  instead of `{"c1", "c2", "c3"}`) and add a `SYMMETRY` entry permuting
+  those sets; that cuts the state space ~24x (3! x 2! x 2!). Note:
+  symmetry requires *model values* — quoted strings are rejected with
+  `Symmetry function must have model values as domain and range`.
 
 ## 6. Mapping: TLA+ action → Python implementation
 
@@ -168,3 +177,37 @@ tests (all in `tests/test_authority.py`):
 * **Liveness/availability.** Only safety invariants are stated; the CAP
   trade-off's availability cost (fail-closed on stale revocation view)
   is modeled (`maxStale` + `syncT`) but not quantified.
+
+## 9. Run notes (2026-09-25)
+
+* **Config comments:** TLC config files use `\*` comments, not `#`. The
+  `#` form is rejected (`ConfigFileException`); the committed cfgs use
+  `\*`.
+* **State space is large.** The 3-id bounds (3 ids, 2 effects, 2 holders,
+  MaxBudget=2, MaxClock=3, MaxEpoch=4) generate 60M+ distinct states --
+  on a 2-core/8 GB box the run thrashed after 130M generated states
+  (disk-queue GC death spiral, ~50k states/min) and was killed. The
+  reduced 2-id model (`authority-small.cfg`: 2 ids, MaxBudget=1,
+  MaxClock=2, MaxStale=1, MaxNonce=1, MaxEpoch=2) **exhausts cleanly:
+  11,173,730 states generated, 4,277,023 distinct, depth 6, 6m27s, all 7
+  invariants hold, no errors** (TLC 2026.09.25, OpenJDK 21.0.5,
+  `-XX:+UseParallelGC -Xmx4g`). Give TLC 4G heap for the small model.
+* **TLC found a real spec bug: `RevokedNeverConsumed` was over-strong.**
+  The first small-model run violated it with the trace
+  `IssueMandate(c1) -> MintChild(c1,c2) -> PresentProof(c2) ->
+  Consume(c2) -> Revoke(c1)`: a child consumed *before* its parent
+  mandate was revoked. That history is legitimate incident response --
+  the consumption happened when nothing was revoked. The invariant's
+  intent ("revocation bites at consume time") is enforced by
+  `MayAuthorize` (checked on every `Consume`/`CheckRead`), which blocks
+  revoke-*then*-consume. The invariant was restated to its checkable
+  core (`i \in revoked => authzCount[i] = 0`; `Revoke` requires ISSUED
+  and `MayAuthorize` blocks consume-after-revoke), with the rationale in
+  a comment above it. The implementation was never wrong -- only the
+  invariant's statement.
+* **Symmetry works; the earlier "TLC regression" claim was my error.**
+  `SYMMETRY` failed with `must have model values as domain and range`
+  because the cfg used quoted strings (`{"c1", ...}`). Retested with
+  model values (`{c1, c2, c3}`) on a minimal spec: symmetry applies
+  correctly. The spec's cfgs still use strings, so symmetry is not
+  currently enabled; converting is future work for the 3-id model.

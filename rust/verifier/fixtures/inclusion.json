@@ -1,0 +1,153 @@
+{
+ "cases": [
+  {
+   "checkpoint": {
+    "checkpoint_id": "ckpt-f2620d99723a878599a14c7fa9e0655c",
+    "start_seq": 0,
+    "end_seq": 2,
+    "event_count": 3,
+    "merkle_root": "ba70ef966a5103dcd74e5d9b364765ac1e818976d66b0dc5d748dc5ce33f1ef4",
+    "previous_checkpoint_root": null,
+    "timestamp": "2026-03-01T12:01:40Z",
+    "anchor_proof": {
+     "scheme": "local-emulated",
+     "root_hash": "ba70ef966a5103dcd74e5d9b364765ac1e818976d66b0dc5d748dc5ce33f1ef4",
+     "timestamp": "2026-03-01T12:01:40Z",
+     "key_id": "anchor-key-1",
+     "signature": "gPSxtoCAT200piEbAYGAyIT6AbQf8ysDQw8MfHFK02JLk5SlyJn9NEtIci3qC4BXaq+DqkIXg+/JaUsiLfgkAg==",
+     "emulated": true,
+     "ots_receipt_b64": null
+    },
+    "next_signer": {
+     "key_id": "ckpt-key-2",
+     "public_key": "TtMvY7818O7vyyXyii4fvchzrig1ZxsMlGD18S5FVqg="
+    }
+   },
+   "event": {
+    "sequence": 1,
+    "event_type": "test.event",
+    "data": {
+     "i": 1,
+     "note": "h\u00e9llo w\u00f6rld \u2713"
+    },
+    "timestamp": "2026-03-01T12:00:01Z",
+    "previous_hash": "c0a297ee1eaac78c999a1b512bd9986664ff8b1f5ab0b8e209c951cbe0ee57ae"
+   },
+   "proof": {
+    "leaf_hash": "12fe4a8cb15de04e5abb55aad94fc9210fdb3cb09dfbec05d428c9b1b14c2112",
+    "leaf_index": 1,
+    "total_leaves": 3,
+    "steps": [
+     {
+      "sibling": "c0a297ee1eaac78c999a1b512bd9986664ff8b1f5ab0b8e209c951cbe0ee57ae",
+      "sibling_is_left": true
+     },
+     {
+      "sibling": "a1ef3e7a6787b998097f07c16408071b8036b09e8cca25f41b80cce9e36f95ee",
+      "sibling_is_left": false
+     }
+    ]
+   },
+   "expected": true
+  },
+  {
+   "checkpoint": {
+    "checkpoint_id": "ckpt-f2620d99723a878599a14c7fa9e0655c",
+    "start_seq": 0,
+    "end_seq": 2,
+    "event_count": 3,
+    "merkle_root": "ba70ef966a5103dcd74e5d9b364765ac1e818976d66b0dc5d748dc5ce33f1ef4",
+    "previous_checkpoint_root": null,
+    "timestamp": "2026-03-01T12:01:40Z",
+    "anchor_proof": {
+     "scheme": "local-emulated",
+     "root_hash": "ba70ef966a5103dcd74e5d9b364765ac1e818976d66b0dc5d748dc5ce33f1ef4",
+     "timestamp": "2026-03-01T12:01:40Z",
+     "key_id": "anchor-key-1",
+     "signature": "gPSxtoCAT200piEbAYGAyIT6AbQf8ysDQw8MfHFK02JLk5SlyJn9NEtIci3qC4BXaq+DqkIXg+/JaUsiLfgkAg==",
+     "emulated": true,
+     "ots_receipt_b64": null
+    },
+    "next_signer": {
+     "key_id": "ckpt-key-2",
+     "public_key": "TtMvY7818O7vyyXyii4fvchzrig1ZxsMlGD18S5FVqg="
+    }
+   },
+   "event": {
+    "sequence": 1,
+    "event_type": "test.event",
+    "data": {
+     "i": 999
+    },
+    "timestamp": "2026-03-01T12:00:01Z",
+    "previous_hash": "c0a297ee1eaac78c999a1b512bd9986664ff8b1f5ab0b8e209c951cbe0ee57ae"
+   },
+   "proof": {
+    "leaf_hash": "12fe4a8cb15de04e5abb55aad94fc9210fdb3cb09dfbec05d428c9b1b14c2112",
+    "leaf_index": 1,
+    "total_leaves": 3,
+    "steps": [
+     {
+      "sibling": "c0a297ee1eaac78c999a1b512bd9986664ff8b1f5ab0b8e209c951cbe0ee57ae",
+      "sibling_is_left": true
+     },
+     {
+      "sibling": "a1ef3e7a6787b998097f07c16408071b8036b09e8cca25f41b80cce9e36f95ee",
+      "sibling_is_left": false
+     }
+    ]
+   },
+   "expected": false
+  },
+  {
+   "checkpoint": {
+    "checkpoint_id": "ckpt-f2620d99723a878599a14c7fa9e0655c",
+    "start_seq": 0,
+    "end_seq": 2,
+    "event_count": 3,
+    "merkle_root": "ba70ef966a5103dcd74e5d9b364765ac1e818976d66b0dc5d748dc5ce33f1ef4",
+    "previous_checkpoint_root": null,
+    "timestamp": "2026-03-01T12:01:40Z",
+    "anchor_proof": {
+     "scheme": "local-emulated",
+     "root_hash": "ba70ef966a5103dcd74e5d9b364765ac1e818976d66b0dc5d748dc5ce33f1ef4",
+     "timestamp": "2026-03-01T12:01:40Z",
+     "key_id": "anchor-key-1",
+     "signature": "gPSxtoCAT200piEbAYGAyIT6AbQf8ysDQw8MfHFK02JLk5SlyJn9NEtIci3qC4BXaq+DqkIXg+/JaUsiLfgkAg==",
+     "emulated": true,
+     "ots_receipt_b64": null
+    },
+    "next_signer": {
+     "key_id": "ckpt-key-2",
+     "public_key": "TtMvY7818O7vyyXyii4fvchzrig1ZxsMlGD18S5FVqg="
+    }
+   },
+   "event": {
+    "sequence": 1,
+    "event_type": "test.event",
+    "data": {
+     "i": 1,
+     "note": "h\u00e9llo w\u00f6rld \u2713"
+    },
+    "timestamp": "2026-03-01T12:00:01Z",
+    "previous_hash": "c0a297ee1eaac78c999a1b512bd9986664ff8b1f5ab0b8e209c951cbe0ee57ae"
+   },
+   "proof": {
+    "leaf_hash": "12fe4a8cb15de04e5abb55aad94fc9210fdb3cb09dfbec05d428c9b1b14c2112",
+    "leaf_index": 1,
+    "total_leaves": 3,
+    "steps": [
+     {
+      "sibling": "abababababababababababababababababababababababababababababababab",
+      "sibling_is_left": true
+     },
+     {
+      "sibling": "a1ef3e7a6787b998097f07c16408071b8036b09e8cca25f41b80cce9e36f95ee",
+      "sibling_is_left": false
+     }
+    ]
+   },
+   "expected": false
+  }
+ ]
+}

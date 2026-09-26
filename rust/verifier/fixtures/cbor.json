@@ -1,0 +1,110 @@
+{
+ "valid": [
+  {
+   "name": "uint",
+   "hex": "182a"
+  },
+  {
+   "name": "nint",
+   "hex": "3903e7"
+  },
+  {
+   "name": "bignum_pos",
+   "hex": "c249400000000000000000"
+  },
+  {
+   "name": "bignum_neg",
+   "hex": "c349400000000000000000"
+  },
+  {
+   "name": "float_half",
+   "hex": "f93e00"
+  },
+  {
+   "name": "float_single",
+   "hex": "fa47c35000"
+  },
+  {
+   "name": "float_double",
+   "hex": "fb3ff199999999999a"
+  },
+  {
+   "name": "float_nan",
+   "hex": "f97e00"
+  },
+  {
+   "name": "bytes",
+   "hex": "420102"
+  },
+  {
+   "name": "text",
+   "hex": "6161"
+  },
+  {
+   "name": "array",
+   "hex": "82016161"
+  },
+  {
+   "name": "map_sorted",
+   "hex": "a2616102616201"
+  },
+  {
+   "name": "tag",
+   "hex": "d8646178"
+  },
+  {
+   "name": "bool_null",
+   "hex": "83f5f4f6"
+  },
+  {
+   "name": "nested",
+   "hex": "a1616b81a1616e20"
+  }
+ ],
+ "invalid": [
+  [
+   "non_shortest_1byte",
+   "1817"
+  ],
+  [
+   "non_shortest_2byte",
+   "1900ff"
+  ],
+  [
+   "indefinite_array",
+   "9f0180ff"
+  ],
+  [
+   "unordered_map",
+   "a2616201616102"
+  ],
+  [
+   "duplicate_key",
+   "a2616101616102"
+  ],
+  [
+   "trailing_bytes",
+   "0102"
+  ],
+  [
+   "truncated",
+   "58100000000000000000"
+  ],
+  [
+   "non_shortest_bignum",
+   "c2420001"
+  ],
+  [
+   "reserved_ai",
+   "fc"
+  ],
+  [
+   "bad_utf8",
+   "62ffb0"
+  ],
+  [
+   "simple_nonshortest",
+   "f800"
+  ]
+ ]
+}

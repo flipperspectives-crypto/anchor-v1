@@ -1,0 +1,48 @@
+[package]
+name = "anchor-v1-verifier"
+version = "1.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Offline verifier for ANCHOR v1 authority artifacts (Rust/WASM). No network: Ed25519, deterministic CBOR, canonical JSON, hash chains."
+license = "MIT"
+repository = "https://github.com/flipperspectives-crypto/anchor-v1"
+
+[lib]
+name = "anchor_v1_verifier"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "anchor-verify"
+path = "src/main.rs"
+required-features = ["cli"]
+
+[features]
+default = ["cli"]
+cli = []
+wasm = ["wasm-bindgen", "js-sys"]
+
+[dependencies]
+sha2 = "0.11"
+ed25519-dalek = "3"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["arbitrary_precision"] }
+hex = "0.4"
+base64 = "0.22"
+half = "2"
+# >=0.3.47: fixes RUSTSEC-2026-0009 (stack-exhaustion DoS in parsing).
+# Only the "parsing" feature is used (RFC 3339); "formatting" is not needed.
+time = { version = "0.3.47", default-features = false, features = ["parsing", "std"] }
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys = { version = "0.3", optional = true }
+
+[dev-dependencies]
+serde_json = { version = "1", features = ["arbitrary_precision"] }
+
+[profile.release]
+# P1 hardening: small, fast, abort-on-panic release artifacts for the
+# offline verifier. overflow-checks stay on: a panic is preferable to a
+# silent wraparound in verification code.
+lto = true
+panic = "abort"
+strip = true
+overflow-checks = true

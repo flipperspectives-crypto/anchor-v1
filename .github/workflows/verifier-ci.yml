@@ -1,0 +1,113 @@
+# CI for the anchor-v1 offline verifier (Rust/WASM), at rust/verifier/.
+#
+# Supply-chain gates (P0, 2026-09-25 audit):
+#   * Cargo.lock is committed; every cargo invocation uses --locked.
+#   * cargo audit --deny warnings  (RustSec advisories)
+#   * cargo deny check             (licenses, bans, sources, advisories)
+#   * cargo vet                    (P1: audited dependency baseline in supply-chain/)
+# Pinned tool versions keep the gates hermetic. The toolchain is pinned by
+# rust/verifier/rust-toolchain.toml (1.89.0, MSRV 1.88 in Cargo.toml).
+
+name: verifier-ci
+
+on:
+  push:
+    branches: [anchor-v1]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_NET_OFFLINE: "false"
+
+jobs:
+  audit:
+    name: supply-chain audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: rust/verifier
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit and cargo-deny
+        run: |
+          cargo install --locked cargo-audit --version ^0.22
+          cargo install --locked cargo-deny --version ^0.20
+      - name: cargo audit
+        # NOTE: `cargo audit` always reads the committed Cargo.lock; it takes
+        # no --locked flag. The test job's `cargo ... --locked` invocations
+        # prove the lockfile is consistent with Cargo.toml.
+        run: cargo audit --deny warnings
+      - name: cargo deny
+        run: cargo deny check
+
+  vet:
+    name: cargo vet
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rust/verifier
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-vet
+        run: cargo install --locked cargo-vet --version ^0.10
+      - name: cargo vet
+        run: cargo vet --locked
+
+  test:
+    name: test + clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rust/verifier
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo test --locked --all-targets
+      - run: cargo clippy --locked --all-targets -- -D warnings
+
+  wasm:
+    name: wasm build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rust/verifier
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Build wasm
+        run: cargo build --locked --target wasm32-unknown-unknown --features wasm --no-default-features
+
+  vendored-offline:
+    name: vendored offline build proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rust/verifier
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Vendor dependencies
+        run: |
+          cargo vendor --locked --versioned-dirs vendor > .cargo-config.toml
+          mkdir -p .cargo
+          # cargo vendor prints a source-replacement snippet; use it verbatim.
+          cat .cargo-config.toml >> .cargo/config.toml
+          rm .cargo-config.toml
+      - name: Build offline from vendor dir
+        run: cargo build --locked --offline
+      - name: Test offline from vendor dir
+        run: cargo test --locked --offline --tests
