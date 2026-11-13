@@ -1,12 +1,12 @@
-# Solana Foundation USA Grant Proposal: ANCHOR v1
+# Solana Foundation Grant Proposal: ANCHOR v1
 
 **Project Name:** ANCHOR v1 Constitutional Policy Enforcement Point for Solana Autonomous AI Agents  
 **Category / Track:** Artificial Intelligence (AI) Infrastructure & Security  
-**Target Grant:** Solana Foundation USA Grant ($10,000 USDG)  
-**Primary Applicant / Author:** Lauren Flipo (`fliptrigga13`)  
+**Target Grant:** Solana Foundation AI & Developer Tooling Grant ($10,000 USDG)  
+**Primary Applicant / Author:** Lauren Flipo (`fliptrigga13`, Canada)  
 **Repository:** [fliptrigga13/anchor-v1](https://github.com/fliptrigga13/anchor-v1)  
 **Active Upstream PR:** [#4: feat(integrations): Jupiter Swap V2 & Solana On-Chain PEP](https://github.com/flipperspectives-crypto/anchor-v1/pull/4)  
-**License:** MIT / Apache-2.0 (100% Free & Open Source Public Good)  
+**License:** Apache-2.0 (100% Free & Open Source Public Good; offline Rust/WASM verifier crate MIT)  
 
 ---
 
@@ -23,7 +23,7 @@ Autonomous AI agents executing on Solana (powered by frameworks such as Solana A
 
 ## 2. The Solution: ANCHOR v1 Constitutional Runtime
 
-**ANCHOR v1** introduces a formally modeled (TLA+ verified), fail-closed constitutional runtime designed specifically to secure autonomous AI agents on Solana.
+**ANCHOR v1** introduces a formally modeled (`tla/authority.tla` — 4,277,023 distinct TLC states verified across 7 invariants with 0 violations in `tla/TLC_RUN_RESULTS.txt`), fail-closed constitutional runtime with an offline Rust/WASM verifier (`rust/verifier/`), designed specifically to secure autonomous AI agents on Solana.
 
 ### Key Architectural Invariants:
 1. **Zero Ambient Authority (`SolanaCredentialBroker`):**
@@ -70,7 +70,9 @@ ANCHOR v1 features a comprehensive, battle-tested test suite:
 pytest -v tests/test_solana_pep.py tests/test_jupiter_pep.py
 ```
 
-### Verified Test Matrix:
+### Verified Test & Formal Proof Matrix:
+* **Formal TLA+ Model (`tla/authority.tla` & `tla/TLC_RUN_RESULTS.txt`):** PASS (11,173,730 states generated / 4,277,023 distinct states verified, 0 violations across all 7 invariants: `TypeOK`, `NoDoubleConsume`, `AttenuationMonotonic`, `RevokedNeverConsumed`, `BudgetNeverNegative`, `HolderBindingPreserved`, `ExpiryHonored`)
+* **Core & Adversarial Suite (`tests/` + `rust/verifier/`):** PASS (1,044+ pytest unit/attack tests + offline Rust/WASM verifier + `6/6` `tests/test_jupiter_pep.py`)
 * `test_credential_broker_isolation`: PASS (Zero ambient access to private keys)
 * `test_successful_solana_transfer_execution`: PASS (500M lamport transfer with SCITT receipt)
 * `test_double_spend_replay_rejected`: PASS (Atomic fail-closed replay containment)
@@ -85,10 +87,11 @@ pytest -v tests/test_solana_pep.py tests/test_jupiter_pep.py
 ## 6. Official Solana Foundation Application Field Reference
 
 * **Applicant Name:** Lauren Flipo (`fliptrigga13`)
+* **Country of Residence:** Canada
 * **Company / Project Name:** ANCHOR v1
 * **Track:** Artificial Intelligence
 * **Grant Amount Requested:** $10,000 USDG
 * **Website / Repo:** `https://github.com/fliptrigga13/anchor-v1`
 * **Upstream PR:** `https://github.com/flipperspectives-crypto/anchor-v1/pull/4`
 * **Program ID / Target:** `Solana_Runtime_V1` / `SolanaInstructionPEP`
-* **Open Source Commitment:** 100% Open Source under MIT / Apache-2.0 licenses
+* **Open Source Commitment:** 100% Open Source under Apache-2.0 license (`LICENSE`; `rust/verifier/` crate `MIT`)
