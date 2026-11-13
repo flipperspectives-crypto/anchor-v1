@@ -3,14 +3,14 @@
 **Project:** ANCHOR v1 Constitutional Policy Enforcement Point for Jupiter Swap V2  
 **Author / Builder:** Lauren Flipo (`fliptrigga13`)  
 **Bounty Track:** `not-your-regular-bounty` (Superteam Earn, 3,000 $jupUSD)  
-**Repository:** [fliptrigga13/anchor-v1](https://github.com/fliptrigga13/anchor-v1)  
+**Repository:** [flipperspectives-crypto/anchor-v1](https://github.com/flipperspectives-crypto/anchor-v1) (Merged PR [#4](https://github.com/flipperspectives-crypto/anchor-v1/pull/4))  
 **Verified Suite:** `pytest tests/test_jupiter_pep.py` (100% Pass)  
 
 ---
 
 ## 1. Executive Summary & Integration Architecture
 
-We integrated Jupiter’s new **Swap V2 API (`/swap/v2/order` + `/swap/v2/execute`)** directly into **ANCHOR v1**, a formally verified (TLA+), fail-closed constitutional runtime for autonomous AI agents on Solana.
+We integrated Jupiter's new **Swap V2 API (`/swap/v2/order` + `/swap/v2/execute`)** directly into **ANCHOR v1**, a formally verified (`tla/authority.tla` — 4,277,023 distinct TLC states, 0 invariant violations), fail-closed constitutional runtime for autonomous AI agents on Solana.
 
 ### The Problem in Autonomous Agent Trading
 When autonomous LLM agents trade through Jupiter, standard developer practices grant the agent direct, ambient access to the Solana wallet private key and Jupiter API keys. If the agent experiences prompt injection, tool-call hallucination, or runaway loops:

@@ -59,7 +59,7 @@
  *     min version, statement requirement) are folded into `scope`.
  *)
 
-EXTENDS Naturals, FiniteSets, Sequences
+EXTENDS Naturals, FiniteSets, Sequences, TLC
 
 CONSTANTS
     Ids,        \* Finite pool of capability ids, e.g. {"c1", "c2", "c3"}.
@@ -352,6 +352,8 @@ Next ==
     \/ EpochTick
 
 Spec == Init /\ [][Next]_vars
+
+ModelSymmetry == Permutations(Ids) \cup Permutations(Effects) \cup Permutations(Holders)
 
 (***************************************************************************)
 (* Invariants. Each is a state predicate, so TLC checks every one of them  *)

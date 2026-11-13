@@ -310,7 +310,8 @@ class TestStalenessDuals:
         cose, payload = issue_and_register(
             store, issuer, holder, env.action_digest, staleness=0,
         )
-        store.sync_revocations()  # make the view fresh
+        sync_moment = datetime.now(tz=timezone.utc)
+        store.sync_revocations(now=sync_moment.timestamp())  # make the view fresh
         proof = make_holder_proof(holder, payload.capability_id, challenge)
         out = store.consume_capability(
             capability_cose=cose,
@@ -318,6 +319,7 @@ class TestStalenessDuals:
             challenge=challenge,
             trusted_issuers=trusted,
             envelope=env,
+            now=sync_moment,
         )
         assert out.capability_id == payload.capability_id
 

@@ -4,8 +4,8 @@
 **Category / Track:** Artificial Intelligence (AI) Infrastructure & Security  
 **Target Grant:** Solana Foundation AI & Developer Tooling Grant ($10,000 USDG)  
 **Primary Applicant / Author:** Lauren Flipo (`fliptrigga13`, Canada)  
-**Repository:** [fliptrigga13/anchor-v1](https://github.com/fliptrigga13/anchor-v1)  
-**Active Upstream PR:** [#4: feat(integrations): Jupiter Swap V2 & Solana On-Chain PEP](https://github.com/flipperspectives-crypto/anchor-v1/pull/4)  
+**Repository:** [flipperspectives-crypto/anchor-v1](https://github.com/flipperspectives-crypto/anchor-v1)  
+**Merged Upstream PR:** [#4: feat(integrations): Jupiter Swap V2 & Solana On-Chain PEP](https://github.com/flipperspectives-crypto/anchor-v1/pull/4)  
 **License:** Apache-2.0 (100% Free & Open Source Public Good; offline Rust/WASM verifier crate MIT)  
 
 ---
@@ -91,7 +91,7 @@ pytest -v tests/test_solana_pep.py tests/test_jupiter_pep.py
 * **Company / Project Name:** ANCHOR v1
 * **Track:** Artificial Intelligence
 * **Grant Amount Requested:** $10,000 USDG
-* **Website / Repo:** `https://github.com/fliptrigga13/anchor-v1`
-* **Upstream PR:** `https://github.com/flipperspectives-crypto/anchor-v1/pull/4`
+* **Website / Repo:** `https://github.com/flipperspectives-crypto/anchor-v1`
+* **Merged Upstream PR:** `https://github.com/flipperspectives-crypto/anchor-v1/pull/4`
 * **Program ID / Target:** `Solana_Runtime_V1` / `SolanaInstructionPEP`
 * **Open Source Commitment:** 100% Open Source under Apache-2.0 license (`LICENSE`; `rust/verifier/` crate `MIT`)
